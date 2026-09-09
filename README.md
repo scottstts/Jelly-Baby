@@ -28,3 +28,11 @@ The play button appears when a facility is close enough. The same button gets
 you off again.
 
 Sound begins with your first interaction and can be muted from the top corner.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0-only).
+
+You may use, modify, and redistribute this software under the terms of the GPLv3. If you distribute a modified or derivative version of this project, you must also make the corresponding source code available under the GPLv3.
+
+See the [LICENSE](./LICENSE) file for the full license terms.
