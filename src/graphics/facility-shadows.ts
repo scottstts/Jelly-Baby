@@ -22,7 +22,11 @@ export class FacilityShadows {
   private readonly casters:{source:THREE.Mesh;shadow:THREE.Mesh;contact:THREE.Mesh;matrix:THREE.Matrix4;positionVersion:number;projectionVersion:number}[]=[];
   private projectionVersion=0;
   private targetDirty=true;
-  private readonly envelopes:THREE.Box3[]=[];
+  private readonly envelopes:{group:THREE.Group;bounds:THREE.Box3;visible:boolean}[]=[];
+  private visible(group:THREE.Object3D) {
+    for(let object:THREE.Object3D|null=group;object;object=object.parent)if(!object.visible)return false;
+    return true;
+  }
   constructor(incoming:THREE.Vector3,windowFraction:number) {
     if(incoming.y>=-.01)throw new Error('Facility shadows require a downward light direction');
     this.surfaces=new SurfaceShadows(incoming,windowFraction);
@@ -43,7 +47,7 @@ export class FacilityShadows {
   /** Bounds must include the facility's entire motion envelope, in world metres. */
   add(group:THREE.Group,envelope:THREE.Box3) {
     this.surfaces.add(group,envelope);
-    this.envelopes.push(envelope.clone());this.fitBounds();
+    this.envelopes.push({group,bounds:envelope.clone(),visible:this.visible(group)});this.fitBounds();
     group.traverse(object=>{
       if(!(object instanceof THREE.Mesh))return;
       const shadow=new THREE.Mesh(object.geometry,this.material);
@@ -64,7 +68,10 @@ export class FacilityShadows {
   private fitBounds() {
     this.bounds.makeEmpty();
     const p=new THREE.Vector3();
-    for(const envelope of this.envelopes) {
+    const active=this.envelopes.filter(item=>this.visible(item.group)).map(item=>item.bounds);
+    if(!active.length)return;
+    this.surfaces.setBounds(active);
+    for(const envelope of active) {
       for(const x of [envelope.min.x,envelope.max.x])for(const y of [envelope.min.y,envelope.max.y])for(const z of [envelope.min.z,envelope.max.z]) {
         p.set(x,y,z).applyMatrix4(this.projection);this.bounds.expandByPoint(new THREE.Vector2(p.x,p.y));
         this.bounds.expandByPoint(new THREE.Vector2(x,z));
@@ -87,19 +94,24 @@ export class FacilityShadows {
     this.camera.bottom=padded.min.y;this.camera.top=padded.max.y;this.camera.updateProjectionMatrix();
   }
   update(renderer:THREE.WebGPURenderer) {
+    let changedWorld=false;
+    for(const item of this.envelopes){const visible=this.visible(item.group);if(visible!==item.visible){item.visible=visible;changedWorld=true;}}
+    if(changedWorld){this.fitBounds();this.targetDirty=true;}
     const worldSyncRevision=this.surfaces.syncWorldMatrices();
     for(const caster of this.casters) {
       const position=caster.source.geometry.attributes.position;
       const positionVersion=position instanceof THREE.InterleavedBufferAttribute?position.data.version:position.version;
       if(positionVersion!==caster.positionVersion){caster.positionVersion=positionVersion;this.targetDirty=true;}
       const transformChanged=!caster.matrix.equals(caster.source.matrixWorld);
-      const visibilityChanged=caster.shadow.visible!==caster.source.visible;
+      let visible=true;
+      for(let object:THREE.Object3D|null=caster.source;object;object=object.parent)visible&&=object.visible;
+      const visibilityChanged=caster.shadow.visible!==visible;
       if(transformChanged||visibilityChanged||caster.projectionVersion!==this.projectionVersion) {
         caster.matrix.copy(caster.source.matrixWorld);
         caster.shadow.matrix.multiplyMatrices(this.projection,caster.matrix);
-        caster.shadow.matrixWorldNeedsUpdate=true;caster.shadow.visible=caster.source.visible;
+        caster.shadow.matrixWorldNeedsUpdate=true;caster.shadow.visible=visible;
         caster.contact.matrix.multiplyMatrices(this.contactProjection,caster.matrix);
-        caster.contact.matrixWorldNeedsUpdate=true;caster.contact.visible=caster.source.visible;
+        caster.contact.matrixWorldNeedsUpdate=true;caster.contact.visible=visible;
         caster.projectionVersion=this.projectionVersion;this.targetDirty=true;
       }
     }

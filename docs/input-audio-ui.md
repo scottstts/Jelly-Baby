@@ -7,6 +7,13 @@ release.
 
 ## Browser shell and interface
 
+While riding the tricycle, WASD and the touch joystick supply vehicle-relative
+throttle and steering. The movement hint changes to “pedal · steer,” and the
+touch hop button is disabled. E or the contextual button dismounts. On foot,
+camera-relative walking resumes. Crash crying is independent of grabbing and
+does not trigger the post-release chuckle; see
+[Toy road and tricycle](toy-road-and-tricycle.md).
+
 [`src/main.ts`](../src/main.ts) creates the page shell inside `#app`:
 
 - the full-screen WebGPU viewport;

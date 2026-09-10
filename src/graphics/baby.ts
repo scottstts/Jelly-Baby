@@ -37,7 +37,7 @@ export class Baby {
       THREE.LinearSRGBColorSpace,
     );
   }
-  update(dt=0,playing=false,sleeping=false) { this.face.update(dt,playing,sleeping); }
+  update(dt=0,playing=false,sleeping=false,crying=false) { this.face.update(dt,playing,sleeping,crying); }
   resetFace() { this.face.reset(); }
   dispose() {
     this.group.traverse(object=>{

@@ -10,6 +10,8 @@ export interface Facility {
   readonly interactionDistance:number;
   readonly laughing?:boolean;
   readonly sleeping?:boolean;
+  readonly crying?:boolean;
+  readonly showPrompt?:boolean;
   readonly action?:string;
   readonly mobileAction?:string;
   readonly cameraDistance?:number;
@@ -26,6 +28,7 @@ export interface Facility {
 
 /** One interaction owner and one contextual affordance, shared by every facility. */
 export class Facilities {
+  enabled=true;
   private readonly items:Facility[]=[];
   private readonly abort=new AbortController();
   private readonly prompt=document.createElement('div');
@@ -50,17 +53,20 @@ export class Facilities {
     if(this.items.some(item=>item.id===facility.id))throw new Error(`Duplicate facility: ${facility.id}`);
     this.items.push(facility);return facility;
   }
-  get active() {return this.items.find(item=>item.active);}
+  get active() {return this.enabled?this.items.find(item=>item.active):undefined;}
+  get crying() {return this.enabled&&this.items.some(item=>item.crying);}
   private get candidate() {
+    if(!this.enabled)return undefined;
     return this.active??this.items.filter(item=>Number.isFinite(item.interactionDistance))
       .sort((a,b)=>a.interactionDistance-b.interactionDistance)[0];
   }
   private interact() {
     if(this.candidate?.interact()){this.onInteract();this.update();}
   }
-  step(h:number) {for(const item of this.items)item.step(h);}
+  step(h:number) {if(this.enabled)for(const item of this.items)item.step(h);}
   warmupCollisions() {this.collisionWorld?.warmup();for(const item of this.items)item.warmupCollision?.();}
   afterStep() {
+    if(!this.enabled)return;
     this.collisionWorld?.begin();
     try {
       for(const item of this.items){
@@ -71,8 +77,9 @@ export class Facilities {
     }finally{this.collisionWorld?.end();}
   }
   update() {
+    if(!this.enabled){this.prompt.hidden=true;return;}
     for(const item of this.items)item.update();
-    const candidate=this.candidate;this.prompt.hidden=!candidate;
+    const candidate=this.candidate;this.prompt.hidden=!candidate||candidate.showPrompt===false;
     if(!candidate)return;
     const action=candidate.action??(candidate.active?`Get Off ${candidate.label}`:`Play ${candidate.label}`);
     const hint=`Press E to ${action}`;

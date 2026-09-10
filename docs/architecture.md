@@ -7,6 +7,11 @@ the only worker is the asynchronous optical-transport worker.
 
 ## Module boundaries
 
+`WorldTravel` selects the playroom or toy-road root and its facility manager.
+Travel reuses the renderer and baby, pauses the fixed-step loop behind the
+loading overlay, and warms the destination before resuming. See
+[Portal worlds](portal-worlds.md) for lifecycle and shadow ownership.
+
 | Area | Primary modules | Responsibility |
 | --- | --- | --- |
 | Browser shell | `src/main.ts`, `src/style.css`, `index.html` | Create the loading/error UI, expose controls, load the runtime, and style the page. |

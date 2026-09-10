@@ -6,6 +6,7 @@ import type { JellySound } from './sound.ts';
 import { surfaceGrab, projectGrabTarget, advanceGrabTarget } from '../physics/grab.ts';
 import { MAX_GRABS } from '../physics/soft-body-kernel.js';
 import { SurfaceBVH } from '../graphics/refractive-light.js';
+import { TricycleCamera } from './tricycle-camera.ts';
 
 type PointerGrab={
   grab:NonNullable<ReturnType<typeof surfaceGrab>>;
@@ -23,6 +24,11 @@ export class Input {
   /** Facilities temporarily own the body while orbit controls remain available. */
   bodyControlled:()=>boolean=()=>false;
   facilityCameraDistance:()=>number|undefined=()=>undefined;
+  vehicleInput:((throttle:number,turn:number)=>void)|undefined;
+  ridingVehicle:()=>boolean=()=>false;
+  vehicleHeading:()=>number|undefined=()=>undefined;
+  private readonly chase:TricycleCamera;
+  private vehicleHints=false;
   readonly controls:OrbitControls;
   private keys=new Set<string>();
   private touchKeys=new Map<number,string>();
@@ -51,6 +57,7 @@ export class Input {
     this.camera=camera;this.body=body;this.mesh=mesh;this.rig=rig;this.sound=sound;this.reset=reset;
     this.canvas=canvas;this.grabBVH=new SurfaceBVH(body.surface);
     this.controls=new OrbitControls(camera,canvas);
+    this.chase=new TricycleCamera(this.controls);
     const c=this.controls;
     c.target.copy(body.center);this.follow.copy(c.target);
     c.enablePan=false;c.enableDamping=true;c.dampingFactor=.07;
@@ -241,11 +248,12 @@ export class Input {
     return false;
   }
   step(h:number) {
-    if(this.bodyControlled()){this.rig.move.set(0,0,0);return;}
     let x=Number(this.pressed('KeyD','ArrowRight'))-Number(this.pressed('KeyA','ArrowLeft'))+this.joystickX;
     let z=Number(this.pressed('KeyW','ArrowUp'))-Number(this.pressed('KeyS','ArrowDown'))+this.joystickZ;
     const inputLength=Math.hypot(x,z);
     if(inputLength>1){x/=inputLength;z/=inputLength;}
+    this.vehicleInput?.(z,-x);
+    if(this.bodyControlled()){this.rig.move.set(0,0,0);return;}
     if(x||z) {
       this.camera.getWorldDirection(this.temp);this.temp.y=0;this.temp.normalize();
       this.rig.move.set(-this.temp.z*x+this.temp.x*z,0,this.temp.x*x+this.temp.z*z);
@@ -267,6 +275,13 @@ export class Input {
     }
   }
   update(dt:number) {
+    const riding=this.ridingVehicle();
+    if(riding!==this.vehicleHints) {
+      this.vehicleHints=riding;
+      const hint=document.querySelector('.desktop-hints .hint-label');if(hint)hint.textContent=riding?'pedal · steer':'wander';
+      this.joystickElement?.setAttribute('aria-label',riding?'Steer and pedal':'Move');
+      const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding;jump.style.opacity=riding?'.3':'';}
+    }
     this.controls.minDistance=this.facilityCameraDistance()??.135;
     // External resets must never leave pointer capture or orbit state wedged.
     for(const [id,state] of this.grabs)if(!this.body.grabs.includes(state.grab))this.finishRelease(id);
@@ -276,7 +291,12 @@ export class Input {
     this.temp.copy(this.follow).sub(this.controls.target);
     this.camera.position.add(this.temp);this.controls.target.copy(this.follow);
     this.controls.update();
+    this.chase.update(this.camera,this.ridingVehicle()?this.vehicleHeading():undefined,dt);
   }
   recenter() {this.clear();this.rig.reset();}
-  dispose() {this.clear();this.abort.abort();this.controls.dispose();}
+  teleport() {
+    this.recenter();this.temp.copy(this.body.center).sub(this.controls.target);
+    this.camera.position.add(this.temp);this.controls.target.copy(this.body.center);this.follow.copy(this.body.center);this.controls.update();
+  }
+  dispose() {this.clear();this.abort.abort();this.chase.dispose();this.controls.dispose();}
 }

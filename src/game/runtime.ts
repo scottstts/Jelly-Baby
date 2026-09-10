@@ -23,6 +23,7 @@ import { BedFacility } from './bed-facility.ts';
 import { TrampolineFacility } from './trampoline-facility.ts';
 import { WearableFacility } from './wearable-facility.ts';
 import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
+import { WorldTravel } from './world-travel.ts';
 
 export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   stage('Starting WebGPU');
@@ -47,12 +48,13 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const composite=createComposite(renderer,scene,camera);
   const rig=new Locomotion(body);
   const facilities=new Facilities(body);
-  const wearableTable=new WearableFacility(scene,body,baby.group,rig,facilityShadows);
-  const bed=new BedFacility(scene,body,facilityShadows);
+  const worlds=new WorldTravel(scene,body,facilityShadows,facilities,renderer,camera,stage,fail);
+  const wearableTable=new WearableFacility(worlds.home,body,baby.group,rig,facilityShadows);
+  const bed=new BedFacility(worlds.home,body,facilityShadows);
   rig.onJump=()=>wearableTable.jumpFromNormalLocomotion();
   facilities.add(wearableTable);
-  facilities.add(new SwingFacility(scene,body,facilityShadows,sound.facility));
-  facilities.add(new TrampolineFacility(scene,body,facilityShadows,sound.facility));
+  facilities.add(new SwingFacility(worlds.home,body,facilityShadows,sound.facility));
+  facilities.add(new TrampolineFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(bed);
   const flavorPicker=new FlavorPicker(flavor=>{
     baby.setFlavor(flavor);optics.setAbsorption(JELLY_FLAVORS[flavor].absorption);
@@ -60,11 +62,21 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   rig.onContact=(speed,foot)=>sound.contact(speed,foot);
   const physicsClock=new FixedStepper(PHYS.step);
   let lastTime=0,disposed=false;
-  const reset=()=>{sound.stopFacilities();facilities.reset();input.recenter();body.reset();baby.resetFace();physicsClock.reset();};
+  const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.inToys?Math.PI:0;baby.resetFace();physicsClock.reset();};
   const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound,reset);
-  input.bodyControlled=()=>!!facilities.active;
-  input.facilityCameraDistance=()=>facilities.active?.cameraDistance;
+  input.bodyControlled=()=>worlds.loading||!!worlds.facilities.active;
+  input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
+  input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};
+  input.ridingVehicle=()=>worlds.inToys&&(worlds.tricycle?.physics.riding??false);
+  input.vehicleHeading=()=>worlds.tricycle?.physics.yaw;
   facilities.onInteract=()=>{input.clear();rig.reset();void sound.unlock().catch(()=>{});};
+  worlds.toyFacilities.onInteract=facilities.onInteract;
+  worlds.onMove=()=>{input.clear();sound.stopFacilities();physicsClock.reset();};
+  worlds.onReady=async()=>{
+    input.teleport();rig.yaw=worlds.inToys?Math.PI:0;baby.resetFace();physicsClock.reset();
+    if(worlds.tricycle)worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
+    baby.update();optics.update(renderer,body,true);transport.follow();await transport.update();
+  };
   const transport=new OpticalTransport(optics,body,camera,environment.incoming,fail);
   const lightingMode=new LightingMode(renderer,scene,environment,light=>{
     optics.setLightDirection(light.incoming);transport.setLightDirection(light.incoming);
@@ -109,17 +121,23 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
     try {
       const dt=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;
       if(document.hidden){physicsClock.reset();return;}
+      if(worlds.loading){physicsClock.reset();return;}
       const steps=physicsClock.advance(dt,()=>{
-        input.step(PHYS.step);facilities.step(PHYS.step);
-        if(!facilities.active)rig.step(PHYS.step);
-        body.step(PHYS.step);wearableTable.syncBedOccupancy(bed.active);facilities.afterStep();input.afterPhysicsStep();
-        if(!facilities.active)rig.afterStep();
+        if(worlds.loading)return;
+        const current=worlds.facilities;
+        input.step(PHYS.step);current.step(PHYS.step);
+        if(!current.active)rig.step(PHYS.step);
+        body.step(PHYS.step);wearableTable.syncBedOccupancy(bed.active);current.afterStep();input.afterPhysicsStep();
+        if(!current.active)rig.afterStep();
+        worlds.step(PHYS.step);
       });
       if(steps&&body.surfaceDirty) {
         if(!body.isFinite())throw new Error('The soft-body simulation produced an invalid state');
         body.updateSurface();
       }
-      facilities.update();baby.update(dt,facilities.active?.laughing??false,facilities.active?.sleeping??false);
+      if(worlds.loading)return;
+      worlds.facilities.update();worlds.update(dt);
+      baby.update(dt,worlds.facilities.active?.laughing??false,worlds.facilities.active?.sleeping??false,worlds.facilities.crying);
       const shadowSyncRevision=facilityShadows.update(renderer);
       facilityShadows.surfaces.update(renderer,shadowSyncRevision);
       input.update(dt);
@@ -135,9 +153,9 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const dispose=()=>{
     if(disposed)return;disposed=true;
     lightingMode.dispose();void renderer.setAnimationLoop(null);input.dispose();sound.dispose();transport.dispose();resizeObserver.disconnect();cancelAnimationFrame(resizeFrame);
-    facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();composite.dispose();baby.dispose();table.dispose();environment.dispose();optics.dispose();renderer.dispose();
+    worlds.dispose();facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();composite.dispose();baby.dispose();table.dispose();environment.dispose();optics.dispose();renderer.dispose();
   };
   window.addEventListener('pagehide',event=>{if(!event.persisted)dispose();});
   if(import.meta.hot)import.meta.hot.dispose(dispose);
-  return {stop:()=>{disposed=true;lightingMode.dispose();input.clear();facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();sound.dispose();transport.dispose();void renderer.setAnimationLoop(null);}};
+  return {stop:()=>{disposed=true;worlds.dispose();lightingMode.dispose();input.clear();facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();sound.dispose();transport.dispose();void renderer.setAnimationLoop(null);}};
 }

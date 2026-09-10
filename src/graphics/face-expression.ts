@@ -16,7 +16,7 @@ export class FaceExpression {
     this.held=false;this.heldFor=0;this.releaseFor=10;
     this.blinkAt=2.4;this.blinkFor=-1;this.doubleBlink=false;
   }
-  update(dt:number,grabbed:boolean,playing=false,sleeping=false) {
+  update(dt:number,grabbed:boolean,playing=false,sleeping=false,crying=false) {
     dt=Math.min(.05,Math.max(0,dt));this.time+=dt;
     this.sleep+=((sleeping?1:0)-this.sleep)*(1-Math.exp(-dt*(sleeping?3:7)));
     if(this.sleep<.0001)this.sleep=0;
@@ -24,8 +24,9 @@ export class FaceExpression {
     this.heldFor=grabbed?this.heldFor+dt:0;this.held=grabbed;
     this.releaseFor+=dt;
     this.sob+=((grabbed?1:0)-this.sob)*(1-Math.exp(-dt*(grabbed?10:7)));
+    if(crying){this.sob=1;this.laugh=0;this.releaseFor=10;}
     // A little breath after release, then buoyant chuckles, then home.
-    const laughTarget=sleeping?0:playing?1:!grabbed&&this.releaseFor>.22&&this.releaseFor<1.65
+    const laughTarget=sleeping||crying?0:playing?1:!grabbed&&this.releaseFor>.22&&this.releaseFor<1.65
       ?Math.sin(Math.PI*(this.releaseFor-.22)/1.43):0;
     this.laugh+=(laughTarget-this.laugh)*(1-Math.exp(-12*dt));
     if(this.sob<.0001)this.sob=0;if(this.laugh<.0001)this.laugh=0;

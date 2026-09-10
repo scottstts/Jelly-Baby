@@ -53,8 +53,8 @@ export class BabyFace {
     add(refinePatch(new THREE.ShapeGeometry(lip,24)),tongue,0,.0368,.00028,'tongue');
   }
   reset() { this.expression.reset();this.bubble.reset(); }
-  update(dt:number,playing=false,sleeping=false) {
-    this.expression.update(dt,this.body.grabs.length>0,playing,sleeping);
+  update(dt:number,playing=false,sleeping=false,crying=false) {
+    this.expression.update(dt,this.body.grabs.length>0,playing,sleeping,crying);
     const {sob,laugh,blink,time,sleep}=this.expression;
     this.bubble.update(dt,sleep,time,this.skin);
     const version=this.body.surface.geometry.attributes.position.version;

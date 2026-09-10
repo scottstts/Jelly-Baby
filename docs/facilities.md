@@ -332,3 +332,12 @@ To add another set piece:
 The active facility should own body posture only for the duration of the ride.
 The shared manager should remain the owner of prompts, `E`, touch action,
 exclusive selection, and teardown.
+
+## World-scoped facilities
+
+Each portal world owns a manager. `enabled` gates interaction, prompts and
+simulation in the inactive world. Optional `crying` is aggregated even after
+the rider releases active ownership, so post-crash recovery can use ordinary
+locomotion while retaining the facial expression. `showPrompt=false` hides
+the action during an ejection. See [Portal worlds](portal-worlds.md) and
+[Toy road and tricycle](toy-road-and-tricycle.md).

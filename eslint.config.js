@@ -15,5 +15,5 @@ export default tseslint.config(
     languageOptions:{globals:{console:'readonly'}},
     rules:{'no-unused-vars':['error',{varsIgnorePattern:'^_',argsIgnorePattern:'^_'}]},
   },
-  {files:['scripts/**/*.mjs'],languageOptions:{globals:{console:'readonly',performance:'readonly',process:'readonly'}}},
+  {files:['scripts/**/*.mjs','scripts/**/*.js'],languageOptions:{globals:{console:'readonly',performance:'readonly',process:'readonly'}}},
 );

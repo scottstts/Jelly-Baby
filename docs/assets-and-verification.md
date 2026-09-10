@@ -6,6 +6,12 @@ source and the verification suite exercises the same modules used by the game.
 
 ## Repository assets
 
+The toy world and tricycle use authored procedural meshes, with no new texture
+downloads. `npm run test:tricycle` covers drive, soft-body coupling, crash faces,
+steering links and geometry budgets. `npm run test:world-travel` uses a renderer
+stub for round trips, loading ownership, cooldown, reuse, reset and disposal;
+it does not replace visual WebGPU inspection.
+
 | Location | Role | Ownership |
 | --- | --- | --- |
 | `src/assets/bg_room.exr` | Source HDR room/window image for environment lighting and measured transport. | Authored runtime asset. |

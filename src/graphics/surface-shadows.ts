@@ -51,6 +51,13 @@ export class SurfaceShadows {
     this.facilityDirty=this.babyDirty=true;
   }
 
+  /** Fit only the active world's envelopes, preserving texel density on return. */
+  setBounds(envelopes:readonly THREE.Box3[]) {
+    this.bounds.makeEmpty();for(const envelope of envelopes)this.bounds.union(envelope);
+    if(this.bounds.isEmpty())return;
+    this.fitCamera();this.facilityDirty=this.babyDirty=true;
+  }
+
   setLighting(incoming:THREE.Vector3,windowFraction:number) {
     this.windowFraction.value=windowFraction;
     this.directionNode.value.copy(incoming).negate();
