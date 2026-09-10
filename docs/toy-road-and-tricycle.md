@@ -29,7 +29,11 @@ a checkered start beneath bunting. A studded brick, pen, bottle, eraser and
 cotton reel interrupt alternating sides of the road. Their meshes and collision
 footprints are not scaled by the larger world. Painted houses and the infield
 trees form the enlarged tabletop village; outer trackside trees remain their
-original size.
+original size. Every decorative tree has one cheap vertical collision envelope
+covering its plinth, trunk and crown for the walking jelly. Infield tree envelopes
+inherit the same twofold scenery scale. These envelopes are not tricycle
+obstacles because the road boundary already keeps the vehicle out of the tree
+areas.
 
 Static parts are baked in assembly-local coordinates and merged by finish. The
 vehicle batches each wheel, saddle and fork shell separately to preserve motion.
@@ -107,6 +111,6 @@ orientation stability, seat retention, ejection, facial timing, standing
 recovery, impact event gating, glancing rigid-body response, constant-length
 steering links and batched geometry. `npm run test:toy-driving` additionally
 checks the twofold layout and 30 cm road width, widened-curb road confinement,
-finite 5 cm-wide walkable curb collision, localized curb narrow phase, portal
-clearance, unscaled obstacle dimensions with width-relative placement, enlarged house
+finite 5 cm-wide walkable curb collision, localized curb narrow phase, cheap tree
+collision envelopes, portal clearance, unscaled obstacle dimensions with width-relative placement, enlarged house
 collision, authored obstacle footprints and low-pen wheel contact.

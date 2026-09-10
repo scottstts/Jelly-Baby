@@ -13,6 +13,8 @@ import { tricycleBoxCollider, tricycleCircleCollider, type TricycleCollider } fr
 const CURB_NEIGHBOR_SEGMENTS=6;
 const CURB_ACTIVE_BOX_COUNT=2*(CURB_NEIGHBOR_SEGMENTS*2+1);
 const CURB_ACTIVE_DISTANCE=.11;
+const TREE_COLLISION_DIAMETER=.030;
+const TREE_COLLISION_HEIGHT=.054;
 
 /** A manufactured ribbon with inset seams, contrasting rolled edges and tabletop props. */
 export class ToyTrack {
@@ -20,6 +22,8 @@ export class ToyTrack {
   /** Solid scenery for the walking baby; the road slab itself is intentionally absent. */
   readonly boxes:CollisionBox[]=[];
   readonly obstacleBoxes:CollisionBox[]=[];
+  /** One cheap envelope per decorative tree for jelly collision only. */
+  readonly treeBoxes:CollisionBox[]=[];
   readonly vehicleColliders:TricycleCollider[]=[];
   /** Exact-height curb segments used only by walking collision. */
   readonly curbBoxes:CollisionBox[]=[];
@@ -90,10 +94,17 @@ export class ToyTrack {
       // beyond the wider curb.
       const offset=infield?-.14*TRACK_RADIUS_SCALE:CURB_OUTER_EDGE+.034,p=trackPoint(t,offset);
       if(p.distanceTo(portalPosition)<.30)continue;
-      const tree=new T.Group();tree.name=infield?'scaled-infield-tree':'trackside-tree';tree.position.set(p.x,0,p.z);tree.scale.setScalar(infield?TRACK_SCENERY_SCALE:1);this.group.add(tree);
+      const treeScale=infield?TRACK_SCENERY_SCALE:1;
+      const tree=new T.Group();tree.name=infield?'scaled-infield-tree':'trackside-tree';tree.position.set(p.x,0,p.z);tree.scale.setScalar(treeScale);this.group.add(tree);
       part(tree,new T.CylinderGeometry(.002,.003,.026,8),gold,0,.013,0);
       part(tree,new T.SphereGeometry(.014,12,8),i%2?blue:coral,0,.034,0).scale.set(.8,1.4,.8);
       part(tree,new T.CylinderGeometry(.013,.015,.004,12),cream,0,.002,0);
+      // A single vertical envelope covers the plinth, trunk and oval crown.
+      // This is intentionally much cheaper than matching the low-poly mesh and
+      // belongs only to jelly collision; the road constraint already keeps the
+      // tricycle away from these trees.
+      const treeBox=box(p.x,TREE_COLLISION_HEIGHT*treeScale/2,p.z,TREE_COLLISION_DIAMETER*treeScale,TREE_COLLISION_HEIGHT*treeScale,TREE_COLLISION_DIAMETER*treeScale);
+      treeBox.margin=.0008;this.treeBoxes.push(treeBox);this.boxes.push(treeBox);
     }
     // Start bunting is repositioned to the wider curb but retains its original scale.
     const gantryOffset=CURB_OUTER_EDGE+.006;

@@ -33,9 +33,15 @@ for(let i=0;i<128;i++)for(const side of [-1,1]) {
   }
 }
 const track=new ToyTrack(),pen=obstacles.find(o=>o.kind==='pen');
-assert.equal(track.boxes.length,track.obstacleBoxes.length,'walking scenery collision remains separate from the road slab and curbs');
-assert(track.boxes.every((box,index)=>box===track.obstacleBoxes[index]),'road slab remains absent from jelly collision');
+assert(track.obstacleBoxes.every((box,index)=>track.boxes[index]===box),'road slab and curbs remain absent from the ordinary walking scenery set');
 assert.equal(track.curbBoxes.length,512,'both visible curb loops have finite walking collision segments');
+assert.equal(track.treeBoxes.length,14,'every low-poly tree has one cheap jelly collision envelope');
+assert.equal(track.boxes.length,track.obstacleBoxes.length+track.treeBoxes.length,'tree collision is added to walking scenery without becoming a tricycle obstacle');
+assert.equal(track.vehicleColliders.length,8,'tree envelopes do not add vehicle colliders');
+const outerTreeBox=track.treeBoxes.find(tree=>Math.abs(tree.halfSize.x-.015)<1e-12);
+const infieldTreeBox=track.treeBoxes.find(tree=>Math.abs(tree.halfSize.x-.030)<1e-12);
+assert(outerTreeBox&&Math.abs(outerTreeBox.halfSize.y-.027)<1e-12,'outer tree collider matches the unscaled visible envelope');
+assert(infieldTreeBox&&Math.abs(infieldTreeBox.halfSize.y-.054)<1e-12,'infield tree collider follows the twofold scenery scale');
 assert(track.curbBoxes.every(curb=>Math.abs(curb.center.y-curb.halfSize.y)<1e-12&&curb.center.y+curb.halfSize.y<=CURB_HEIGHT+1e-12),'curb collision stops at the visible curb top instead of forming an invisible wall');
 assert(track.curbBoxes.every(curb=>Math.abs(curb.halfSize.x-CURB_WIDTH/2)<1e-12),'walking collision expands to the full five-centimetre curb width');
 const curbPoint=trackPoint(.08,(CURB_ROAD_EDGE+CURB_OUTER_EDGE)/2),localCurbs=[...track.curbsNear(curbPoint.x,curbPoint.z)];
@@ -44,6 +50,15 @@ const curbBody=new SoftBody(loadModel()),curbCollision=new FacilityCollision(cur
 const moveBody=(targetX,targetY,targetZ)=>{const dx=targetX-curbBody.center.x,dy=targetY-curbBody.center.y,dz=targetZ-curbBody.center.z;for(let j=0;j<curbBody.x.length;j+=3){curbBody.x[j]+=dx;curbBody.x[j+1]+=dy;curbBody.x[j+2]+=dz;}curbBody.previous.set(curbBody.x);curbBody.updateCenter();};
 moveBody(curbPoint.x,curbBody.center.y,curbPoint.z);assert(curbCollision.resolveBoxes(localCurbs),'grounded baby is blocked by the visible curb');
 curbBody.reset();moveBody(curbPoint.x,curbBody.center.y+CURB_HEIGHT+.035,curbPoint.z);assert.equal(curbCollision.resolveBoxes(localCurbs),false,'a jumped-clear baby has no curb collision above the finite top');curbCollision.dispose();
+const treeCollision=new FacilityCollision(curbBody);treeCollision.registerBoxes(track.treeBoxes);
+curbBody.reset();
+const restBounds=curbBody.surface.geometry.boundingBox;assert(restBounds,'jelly surface keeps rest-space bounds for contact placement');
+const leftReach=curbBody.center.x-restBounds.min.x;
+// Put the tree against the outside of the jelly skin. Centering the whole tree
+// inside the jelly is not a valid point-sampled contact test: no surface sample
+// is inside an obstacle that is fully enclosed by the body.
+moveBody(outerTreeBox.center.x+outerTreeBox.halfSize.x+leftReach-.006,curbBody.center.y,outerTreeBox.center.z);
+assert(treeCollision.resolveBoxes(track.treeBoxes),'jelly skin contact resolves against the cheap tree envelope');treeCollision.dispose();
 assert.equal(track.vehicleColliders.length,8,'four tall props and four houses block the tricycle');
 assert(Math.abs(track.obstacleBoxes[0].halfSize.x-.026)<1e-12&&Math.abs(track.obstacleBoxes[0].halfSize.z-.0135)<1e-12,'track obstacles keep their original physical size');
 assert(Math.abs(track.obstacleBoxes[5].halfSize.x-.083)<1e-12&&Math.abs(track.obstacleBoxes[5].halfSize.y-.082)<1e-12,'infield houses scale twofold with the enlarged world');
