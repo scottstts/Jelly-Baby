@@ -1,7 +1,8 @@
 import { Scene, Vector3, type WebGPURenderer, type PerspectiveCamera } from 'three/webgpu';
 import type { SoftBody } from '../physics/soft-body.js';
 import type { FacilityShadows } from '../graphics/facility-shadows.ts';
-import { HOME_PORTAL, JellyPortal, TRACK_PORTAL } from '../graphics/jelly-portal.ts';
+import { HOME_PORTAL, JellyPortal } from '../graphics/jelly-portal.ts';
+import { TRACK_PORTAL } from './toy-world-layout.ts';
 import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
 import { Facilities } from './facilities.ts';
 import type { TricycleFacility } from './tricycle-facility.ts';

@@ -4,7 +4,8 @@ import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { Facilities } from '../src/game/facilities.ts';
 import { WorldTravel } from '../src/game/world-travel.ts';
-import { HOME_PORTAL, TRACK_PORTAL } from '../src/graphics/jelly-portal.ts';
+import { HOME_PORTAL } from '../src/graphics/jelly-portal.ts';
+import { TRACK_PORTAL } from '../src/game/toy-world-layout.ts';
 
 const element=()=>({hidden:false,className:'',textContent:'',append(){},remove(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){}}});
 const app=element(),loading=element();

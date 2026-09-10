@@ -151,6 +151,9 @@ Body contact uses no audio files. It combines three damped sine membrane modes
 with a short band-passed noise transient. Foot contacts use a higher transient
 band than body contacts, and strength is derived from impact speed. The sound
 listener follows the camera and stores its right vector for facility panning.
+Tricycle collisions reuse the body-contact texture but trigger only on a meaningful
+new impact; sustained obstacle contact is held as one contact so it cannot retrigger
+at the 240 Hz physics rate.
 
 Facility audio is event-driven by fixed-step motion, not a free-running loop.
 [`FacilityMotionSound`](../src/game/facility-sound.ts) detects swing reversals,
