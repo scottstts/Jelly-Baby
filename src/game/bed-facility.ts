@@ -32,6 +32,7 @@ export class BedFacility implements Facility {
     if(!this.active)this.collision.resolveBoxes(this.visual.boxes);
     this.blanket.step(this.lastStep,this.physics.body,this.active);
   }
+  warmupCollision(){this.collision.warmupBoxes(this.visual.boxes);this.blanket.warmup(this.physics.body);}
   update(){
     if(this.active&&this.physics.body.surfaceDirty)this.physics.body.updateSurface();
     this.blanket.prepareRender(this.physics.body,this.active);this.visual.update();

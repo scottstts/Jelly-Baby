@@ -23,6 +23,16 @@ The renderer uses sRGB output and AgX tone mapping with exposure `1.05`. Its
 canvas receives a descriptive ARIA label that covers walking, jumping,
 facility interaction, orbiting, and dragging.
 
+## Loading-time pipeline warmup
+
+[`render-warmup.ts`](../src/graphics/render-warmup.ts) wraps the main-scene
+`compileAsync` call. During that call only, it exposes hidden objects and disables
+frustum culling for every traversed object, then restores the exact original
+flags in `finally`. This ensures rear-room facilities and later-visible effects
+receive their WebGPU pipelines while the loading UI is still active rather than
+on the first gameplay frame that brings them into view. The helper does not alter
+normal render culling, visibility, materials, or collision behavior.
+
 ## Drawing-buffer and camera sizing
 
 [`resizeView`](../src/graphics/renderer.ts) is called after startup and through a

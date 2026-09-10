@@ -74,6 +74,8 @@ export class WearableFacility implements Facility {
     this.collision.resolveBoxes(this.visual.collisionBoxes);
   }
 
+  warmupCollision() {this.collision.warmupBoxes(this.visual.collisionBoxes);}
+
   update() {
     const index=this.physics.wornIndex;
     if(index===null)return;

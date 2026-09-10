@@ -57,6 +57,15 @@ export class BedBlanket {
     }
   }
   private base(x:number){return BED.top+.0018-Math.max(0,Math.abs(-.063+x*this.dx)-.051)*1.5;}
+  /** Allocate and execute both native blanket collision paths without changing cloth. */
+  warmup(body:SoftBody){
+    if(!body.kernel)return;
+    const contact=this.baseContact.slice(),cloth=this.positions.slice();
+    for(let i=0;i<4;i++){
+      this.bodyContact.sample(body,contact,this.columns,this.rows,this.dx,this.dz);
+      this.clearance.resolve(body,cloth,this.columns,this.rows,this.dx,this.dz);
+    }
+  }
   prepareRender(body:SoftBody,occupied:boolean){
     const surfaceRevision=occupied?body.surfaceRevision:-1;
     if(this.lastPreparedVersion===this.version&&this.lastPreparedSurfaceRevision===surfaceRevision&&this.lastPreparedOccupied===occupied)return;

@@ -77,6 +77,7 @@ export function bodyCollisionBounds(body:SoftBody,magnitude:number,error:number,
 }
 
 const worlds=new WeakMap<SoftBody,CollisionHierarchy>();
+const COLLISION_BOUNDS_WARMUP_PASSES=32;
 export function collisionHierarchy(body:SoftBody){
   let world=worlds.get(body);if(!world){world=new CollisionHierarchy(body);worlds.set(body,world);}return world;
 }
@@ -109,6 +110,8 @@ export class CollisionHierarchy {
   }
   register(bounds:Float64Array){this.groups.add(bounds);unionBounds(this.all,bounds);this.invalidate();}
   unregister(bounds:Float64Array){this.groups.delete(bounds);emptyBounds(this.all);for(const b of this.groups)unionBounds(this.all,b);this.invalidate();}
+  /** Exercise the native enclosure export without changing hierarchy cache/counters. */
+  warmup(){const kernel=this.body.kernel;if(kernel)for(let i=0;i<COLLISION_BOUNDS_WARMUP_PASSES;i++)kernel.collisionBounds(this.magnitude,this.error);}
   begin(){this.batching=true;this.invalidate();}
   end(){this.batching=false;this.invalidate();}
   invalidate(){this.valid=false;}

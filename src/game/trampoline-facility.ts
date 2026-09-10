@@ -51,6 +51,12 @@ export class TrampolineFacility implements Facility {
       TRAMPOLINE.height+TRAMPOLINE.rimCenterOffset+TRAMPOLINE.rimHalfHeight,
     );
   }
+  warmupCollision() {
+    this.collision.warmupCylinderBarrier(
+      TRAMPOLINE.x,TRAMPOLINE.z,TRAMPOLINE.radius,PHYS.floor,
+      TRAMPOLINE.height+TRAMPOLINE.rimCenterOffset+TRAMPOLINE.rimHalfHeight,
+    );
+  }
   update() {this.visual.update(this.physics.compression);}
   reset() {this.audio.reset();this.physics.reset();this.laughStarted=false;this.update();}
   dispose() {this.collision.dispose();this.visual.group.removeFromParent();this.visual.dispose();}

@@ -18,6 +18,7 @@ export interface Facility {
   interact():boolean;
   step(h:number):void;
   afterStep?():void;
+  warmupCollision?():void;
   update():void;
   reset():void;
   dispose():void;
@@ -58,6 +59,7 @@ export class Facilities {
     if(this.candidate?.interact()){this.onInteract();this.update();}
   }
   step(h:number) {for(const item of this.items)item.step(h);}
+  warmupCollisions() {this.collisionWorld?.warmup();for(const item of this.items)item.warmupCollision?.();}
   afterStep() {
     this.collisionWorld?.begin();
     try {

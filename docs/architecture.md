@@ -41,10 +41,17 @@ local `try` block still reaches the visible error card.
 4. Attach reset, sound, facility, resize, and failure callbacks.
 5. Settle the body for 80 fixed steps before showing the first frame. This lets
    contact and posture establish without exposing the startup pose.
-6. Update the surface, face, facility shadow field, caustics, and worker-backed
-   transport; compile the scene asynchronously; render once; and wait for
+6. Update the surface, then warm every built-in native facility collision path
+   and both bed blanket collision paths using non-mutating scratch work. This
+   moves lazy native allocations and cold execution into the loading screen.
+7. Update the face, facility shadow field, caustics, and worker-backed
+   transport; precompile the entire main scene with visibility and frustum
+   rejection temporarily disabled, then restore those flags. This is required
+   because Three r185's `compileAsync(scene, camera)` gathers candidates through
+   the normal camera projection path, while the startup camera does not see the
+   rear bed/dressing-table area. Render once and wait for
    `queue.onSubmittedWorkDone()` before declaring startup complete.
-7. Start the renderer animation loop and hide the loading card.
+8. Start the renderer animation loop and hide the loading card.
 
 The first-frame fence matters: compilation or submission errors must not be
 mistaken for a successful boot merely because a canvas exists.

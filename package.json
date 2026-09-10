@@ -19,6 +19,8 @@
     "test:collision-broadphase": "node --experimental-strip-types scripts/verify-collision-broadphase.mjs",
     "test:collision-hierarchy": "node --experimental-strip-types scripts/verify-collision-hierarchy.mjs",
     "test:native-collision": "node --experimental-strip-types scripts/verify-native-collision.mjs",
+    "test:collision-warmup": "node --experimental-strip-types scripts/verify-collision-warmup.mjs",
+    "test:render-warmup": "node --experimental-strip-types scripts/verify-render-warmup.mjs",
     "test:lighting": "node --experimental-strip-types scripts/verify-lighting.mjs",
     "test:facility-shadows": "node --experimental-strip-types scripts/verify-facility-shadows.mjs",
     "test:facility-sound": "node --experimental-strip-types scripts/verify-facility-sound.mjs",

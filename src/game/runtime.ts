@@ -22,6 +22,7 @@ import { LightingMode } from './lighting-mode.ts';
 import { BedFacility } from './bed-facility.ts';
 import { TrampolineFacility } from './trampoline-facility.ts';
 import { WearableFacility } from './wearable-facility.ts';
+import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
 
 export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   stage('Starting WebGPU');
@@ -87,13 +88,16 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   stage('Settling in');
   // Let contact establish itself before displaying the first frame.
   for(let i=0;i<80;i++){rig.step(PHYS.step);body.step(PHYS.step);}
-  body.updateSurface();baby.update();input.update(1);
+  body.updateSurface();
+  stage('Warming collisions');
+  facilities.warmupCollisions();
+  baby.update();input.update(1);
   const shadowSyncRevision=facilityShadows.update(renderer);
   facilityShadows.surfaces.update(renderer,shadowSyncRevision);
   optics.update(renderer,body,true);
   await transport.update();
   stage('Compiling the material');
-  await renderer.compileAsync(scene,camera);
+  await warmMainScenePipelines(renderer,scene,camera);
   stage('Drawing the first frame');
   composite.render();
   // Fence first-frame GPU work so validation/OOM cannot masquerade as a successful boot.

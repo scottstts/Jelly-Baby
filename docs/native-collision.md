@@ -27,6 +27,27 @@ Steady-state wrapper calls reuse motion lists and grid views without allocating
 per-box point arrays or spread-argument lists. Grid capacity grows geometrically
 to bound retained allocations if a caller changes resolution repeatedly.
 
+## Loading warmup
+
+Built-in facility collision is warmed before the first rendered gameplay frame.
+Each facility creates its normal persistent native collision object and repeatedly
+executes the same box or cylinder export against synthetic geometry translated
+far outside the play area. A synthetic admitting bound makes the native function
+traverse its candidate and sampled narrow-phase loops, but the real cage cannot
+contact the translated geometry, so positions, velocities and solver metadata
+are untouched. This warmup bypasses the gameplay hierarchy intentionally; the
+runtime rejection order and contact behavior are unchanged. The hierarchy's
+native cage-bound export is warmed separately without populating its scoped
+cache or diagnostic counters. Box warmup finishes by packing the real authored
+transforms behind a rejecting synthetic bound, avoiding another first-use write
+for static facility records.
+
+The bed also executes the native blanket-contact and blanket-clearance exports
+on scratch grids during loading. Their immutable uploads, projected-position
+scratch and reusable grid buffers are therefore allocated before the player can
+enter the bed. The scratch results are discarded and neither simulated nor
+rendered blanket state changes.
+
 The swing exposes a pendulum descriptor alongside its JavaScript callbacks.
 All five seat boxes share one native speed record. Each contact immediately
 updates that speed with the same point-velocity, effective-mass and impulse
@@ -70,3 +91,8 @@ costs, with no machine-dependent performance assertion. A local Node run gave
 and 4.84× for exact blanket clearance. These are workload measurements, not
 browser FPS predictions. Existing facility tests cover hard throws and grazing
 release; bed tests independently verify visible-skin clearance and settling.
+
+`npm run test:collision-warmup` verifies that box, cylinder and blanket warmup
+create their native paths without changing body state, native solver metadata,
+surface revisions or blanket state, and that a warmed box solver produces the
+same next real contact result as a cold solver.

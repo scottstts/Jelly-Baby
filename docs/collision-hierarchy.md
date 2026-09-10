@@ -43,6 +43,12 @@ The union is updated on registration/removal. The old center-distance gates are
 removed because they do not conservatively enclose stretched limbs. Interaction
 distances and boarding behavior remain separate and unchanged.
 
+Loading-time native warmup is outside this hierarchy contract. It uses translated
+non-contacting geometry plus a synthetic bound solely to initialize and tier the
+same native exports before gameplay. Normal facility calls still enter through
+the hierarchy in the rejection order above; no warmup enclosure is registered
+or retained.
+
 ## Cache scope
 
 `Facilities.afterStep` opens a batch after all ordinary physics writes. Within

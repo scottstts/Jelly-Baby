@@ -61,6 +61,7 @@ export class SwingFacility implements Facility {
     this.visual.update(this.physics.angle,this.physics.seatCollisionMotion);
     this.collision.resolveBoxes(this.visual.collisionBoxes);
   }
+  warmupCollision() {this.collision.warmupBoxes(this.visual.collisionBoxes);}
   update() {this.visual.update(this.physics.angle,this.physics.seatCollisionMotion);}
   reset() {this.audio.reset();this.laughStarted=false;this.laughBeyondThreshold=false;this.physics.reset();this.update();}
   dispose() {this.collision.dispose();this.visual.group.removeFromParent();this.visual.dispose();}

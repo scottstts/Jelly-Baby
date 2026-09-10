@@ -1,6 +1,6 @@
 import type { SoftBody } from './soft-body.js';
 import { stopFacilityThrow } from './facility-throw.ts';
-import { bodyCollisionBounds, boxBounds, boundsOverlap, collisionHierarchy, facilityBoxBounds, type CollisionHierarchy } from './collision-bounds.ts';
+import { bodyCollisionBounds, boxBounds, boundsOverlap, collisionHierarchy, emptyBounds, facilityBoxBounds, unionBounds, type CollisionHierarchy } from './collision-bounds.ts';
 
 type PointLike={x:number;y:number;z:number};
 
@@ -35,6 +35,8 @@ export interface CollisionBox {
 export const FACILITY_COLLISION_SAMPLE_SPACING=.003;
 export const FACILITY_COLLISION_MARGIN=.002;
 const COLLISION_ITERATIONS=2;
+const COLLISION_WARMUP_PASSES=32;
+const COLLISION_WARMUP_OFFSET=1024;
 
 /** Lightweight narrow-phase contacts for authored facility volumes. */
 export class FacilityCollision {
@@ -106,6 +108,42 @@ export class FacilityCollision {
   }
   mayCollide(){return !this.registeredBounds||this.hierarchy.forGroup(this.registeredBounds)!==null;}
   dispose(){if(this.registeredBounds)this.hierarchy.unregister(this.registeredBounds);this.registeredBounds=null;}
+
+  /**
+   * Pay native allocation and tier-up cost during loading without touching the
+   * live body. Synthetic geometry is translated far from gameplay, while a
+   * matching synthetic bound deliberately admits every piece so the native
+   * narrow phase still traverses its normal candidate/sample loops.
+   */
+  warmupBoxes(boxes:readonly CollisionBox[],margin=FACILITY_COLLISION_MARGIN) {
+    if(!boxes.length)return;
+    const native=this.nativeKernel();
+    if(!native)return;
+    const warmupBoxes=boxes.map(box=>({
+      ...box,
+      center:{x:box.center.x+COLLISION_WARMUP_OFFSET,y:box.center.y,z:box.center.z+COLLISION_WARMUP_OFFSET},
+    }));
+    const bounds=new Float64Array(6),piece=new Float64Array(6);emptyBounds(bounds);
+    for(const box of warmupBoxes){boxBounds(box,margin,piece);unionBounds(bounds,piece);}
+    for(let i=0;i<COLLISION_WARMUP_PASSES;i++) {
+      if(native.resolveBoxes(warmupBoxes,margin,bounds)===null)return;
+    }
+    // Leave static authored records packed with their real transforms. The far
+    // rejecting bound keeps this final write out of contact with the live body.
+    const rejectingBounds=bounds.slice();
+    rejectingBounds[0]+=COLLISION_WARMUP_OFFSET;rejectingBounds[2]+=COLLISION_WARMUP_OFFSET;
+    rejectingBounds[3]+=COLLISION_WARMUP_OFFSET;rejectingBounds[5]+=COLLISION_WARMUP_OFFSET;
+    native.resolveBoxes(boxes,margin,rejectingBounds);
+  }
+
+  /** Warm the native cylinder path with the same non-contacting strategy. */
+  warmupCylinderBarrier(centerX:number,centerZ:number,radius:number,minY:number,maxY:number,margin=FACILITY_COLLISION_MARGIN) {
+    const native=this.nativeKernel();
+    if(!native)return;
+    const x=centerX+COLLISION_WARMUP_OFFSET,z=centerZ+COLLISION_WARMUP_OFFSET,r=radius+margin;
+    const bounds=new Float64Array([x-r,minY,z-r,x+r,maxY,z+r]);
+    for(let i=0;i<COLLISION_WARMUP_PASSES;i++)native.resolveCylinder(x,z,radius,minY,maxY,margin,bounds);
+  }
 
   /** Resolve tight oriented boxes, such as the swing's timber frame pieces. */
   resolveBoxes(boxes:readonly CollisionBox[],margin=FACILITY_COLLISION_MARGIN) {
