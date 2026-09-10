@@ -1,9 +1,9 @@
 import { CURB_OUTER_EDGE, trackPoint } from './toy-track-layout.ts';
 
 /** Lightweight portal placement shared by travel and toy-world scenery. */
-const PORTAL_TRACK_T=.125;
+const PORTAL_TRACK_T=0;
 const PORTAL_HOUSING_RADIUS=.079;
-const PORTAL_ROAD_CLEARANCE=.18;
+const PORTAL_ROAD_CLEARANCE=.10;
 const portalPoint=trackPoint(PORTAL_TRACK_T,CURB_OUTER_EDGE+PORTAL_HOUSING_RADIUS+PORTAL_ROAD_CLEARANCE);
 export const TRACK_PORTAL={x:portalPoint.x,z:portalPoint.z};
 export const PORTAL_ARRIVAL_DISTANCE=.10;

@@ -16,9 +16,10 @@ const tangent=trackCurve.getTangentAt(0);
 assert(Math.sin(TRACK_START.yaw)*tangent.x+Math.cos(TRACK_START.yaw)*tangent.z<-.999,'counterclockwise starting heading');
 const portalClearance=roadLocation(TRACK_PORTAL.x,TRACK_PORTAL.z).distance-CURB_OUTER_EDGE-.079;
 const arrivalClearance=roadLocation(TRACK_PORTAL.x,TRACK_PORTAL.z+PORTAL_ARRIVAL_DISTANCE).distance-TRACK_WIDTH/2;
-assert(portalClearance>.175,'toy portal housing keeps the authored 18 cm clearance beyond the widened curb');
+assert(portalClearance>.095,'toy portal housing keeps the authored 10 cm clearance beyond the widened curb');
 assert(arrivalClearance>.25,'toy-world arrival starts well clear of the enlarged road');
-assert(Math.hypot(TRACK_PORTAL.x-TRACK_START.x,TRACK_PORTAL.z-TRACK_START.z)>.55,'portal is separated from the parked tricycle');
+const portalStartDistance=Math.hypot(TRACK_PORTAL.x-TRACK_START.x,TRACK_PORTAL.z-TRACK_START.z);
+assert(portalStartDistance>.34&&portalStartDistance<.42,'portal sits close to the track start while retaining a healthy gap from the parked tricycle');
 
 const samples=Array.from({length:512},(_,i)=>trackPoint(i/512));
 const width=Math.max(...samples.map(p=>p.x))-Math.min(...samples.map(p=>p.x));

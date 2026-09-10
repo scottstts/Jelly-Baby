@@ -9,7 +9,8 @@ obstacles retain their original object scale. Their positions are recomputed
 from the enlarged road:
 obstacle lateral offsets preserve their intended fraction of road width, the
 tricycle starts on the new centerline, and the portal is placed outside the road
-with authored clearance.
+at that same starting section with authored clearance, so arrival begins close to
+the parked tricycle rather than elsewhere around the enlarged loop.
 
 The 3 mm road slab remains visual-only to the walking jelly and uses the
 underlying tabletop floor for support. The raised curbs are different: they have

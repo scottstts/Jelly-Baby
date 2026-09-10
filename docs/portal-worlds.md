@@ -2,10 +2,12 @@
 
 The playroom portal sits at `(0, -.255)` behind the swing and trampoline. The
 toy-world portal is derived from the enlarged road layout rather than a fixed
-legacy coordinate: it sits outside the road near the +Z side with 18 cm of clear
-tabletop between the portal housing and the widened curb's outer edge, plus
-substantial separation from the parked tricycle. This keeps portal placement correct when the road
-layout changes.
+legacy coordinate. It now sits directly beside the track's starting point, outside
+the widened curb, with 10 cm of clear tabletop between the portal housing and the
+curb's outer edge. That keeps a healthy physical gap while making the parked
+tricycle and start line immediately nearby after arrival. The placement remains
+derived from the road geometry so later layout changes do not reintroduce the old
+large separation.
 
 Arrival is 10 cm from the destination membrane on whichever side the current
 orbit camera occupies. Camera translation preserves that side through the
