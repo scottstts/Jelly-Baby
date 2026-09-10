@@ -4,7 +4,7 @@ import { SoftBody } from '../src/physics/soft-body.js';
 import { loadModel } from './load-model.mjs';
 import { TricyclePhysics } from '../src/game/tricycle-physics.ts';
 import { ToyTrack } from '../src/graphics/toy-track.ts';
-import { TRACK_START, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, trackCurve, trackPoint, obstacles, roadLocation } from '../src/game/toy-track-layout.ts';
+import { TRACK_START, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT, CURB_OUTER_EDGE, CURB_ROAD_EDGE, CURB_WIDTH, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, trackCurve, trackPoint, obstacles, roadLocation } from '../src/game/toy-track-layout.ts';
 import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL } from '../src/game/toy-world-layout.ts';
 import { WHEEL_CONTACTS, constrainToRoad, wheelHeight } from '../src/game/tricycle-road-contact.ts';
 import { TricycleCamera } from '../src/game/tricycle-camera.ts';
@@ -14,21 +14,21 @@ import { FacilityCollision } from '../src/physics/facility-collision.ts';
 
 const tangent=trackCurve.getTangentAt(0);
 assert(Math.sin(TRACK_START.yaw)*tangent.x+Math.cos(TRACK_START.yaw)*tangent.z<-.999,'counterclockwise starting heading');
-const portalClearance=roadLocation(TRACK_PORTAL.x,TRACK_PORTAL.z).distance-TRACK_WIDTH/2-.079;
+const portalClearance=roadLocation(TRACK_PORTAL.x,TRACK_PORTAL.z).distance-CURB_OUTER_EDGE-.079;
 const arrivalClearance=roadLocation(TRACK_PORTAL.x,TRACK_PORTAL.z+PORTAL_ARRIVAL_DISTANCE).distance-TRACK_WIDTH/2;
-assert(portalClearance>.175,'toy portal housing keeps the authored 18 cm road clearance');
+assert(portalClearance>.175,'toy portal housing keeps the authored 18 cm clearance beyond the widened curb');
 assert(arrivalClearance>.25,'toy-world arrival starts well clear of the enlarged road');
 assert(Math.hypot(TRACK_PORTAL.x-TRACK_START.x,TRACK_PORTAL.z-TRACK_START.z)>.55,'portal is separated from the parked tricycle');
 
 const samples=Array.from({length:512},(_,i)=>trackPoint(i/512));
 const width=Math.max(...samples.map(p=>p.x))-Math.min(...samples.map(p=>p.x));
-assert.equal(TRACK_RADIUS_SCALE,2);assert.equal(TRACK_SCENERY_SCALE,2);assert.equal(TRACK_WIDTH,.30);
+assert.equal(TRACK_RADIUS_SCALE,2);assert.equal(TRACK_SCENERY_SCALE,2);assert(Math.abs(TRACK_WIDTH-.30)<1e-12,'track width is 30 cm');assert.equal(CURB_WIDTH,.05);assert(Math.abs(CURB_ROAD_EDGE-.146)<1e-12,'road-facing curb edge is 14.6 cm from the centerline');
 assert(width>1.9&&width<2.1,'two metre centerline diameter');
 for(let i=0;i<128;i++)for(const side of [-1,1]) {
   const p=trackPoint(i/128,side*.12),yaw=i*.31;constrainToRoad(p,yaw);
   for(const w of WHEEL_CONTACTS) {
     const x=p.x+Math.cos(yaw)*w.x+Math.sin(yaw)*w.z,z=p.z-Math.sin(yaw)*w.x+Math.cos(yaw)*w.z;
-    assert(roadLocation(x,z).distance<TRACK_WIDTH/2-.005,'all wheel centres remain within raised curbs');
+    assert(roadLocation(x,z).distance<CURB_ROAD_EDGE-.001,'all wheel centres remain inside the widened curb face');
   }
 }
 const track=new ToyTrack(),pen=obstacles.find(o=>o.kind==='pen');
@@ -36,7 +36,8 @@ assert.equal(track.boxes.length,track.obstacleBoxes.length,'walking scenery coll
 assert(track.boxes.every((box,index)=>box===track.obstacleBoxes[index]),'road slab remains absent from jelly collision');
 assert.equal(track.curbBoxes.length,512,'both visible curb loops have finite walking collision segments');
 assert(track.curbBoxes.every(curb=>Math.abs(curb.center.y-curb.halfSize.y)<1e-12&&curb.center.y+curb.halfSize.y<=CURB_HEIGHT+1e-12),'curb collision stops at the visible curb top instead of forming an invisible wall');
-const curbPoint=trackPoint(.08,TRACK_WIDTH/2),localCurbs=[...track.curbsNear(curbPoint.x,curbPoint.z)];
+assert(track.curbBoxes.every(curb=>Math.abs(curb.halfSize.x-CURB_WIDTH/2)<1e-12),'walking collision expands to the full five-centimetre curb width');
+const curbPoint=trackPoint(.08,(CURB_ROAD_EDGE+CURB_OUTER_EDGE)/2),localCurbs=[...track.curbsNear(curbPoint.x,curbPoint.z)];
 assert.equal(localCurbs.length,track.curbActiveBoxCount,'only nearby curb segments enter the 240 Hz narrow phase');
 const curbBody=new SoftBody(loadModel()),curbCollision=new FacilityCollision(curbBody);curbCollision.registerBoxes(localCurbs);
 const moveBody=(targetX,targetY,targetZ)=>{const dx=targetX-curbBody.center.x,dy=targetY-curbBody.center.y,dz=targetZ-curbBody.center.z;for(let j=0;j<curbBody.x.length;j+=3){curbBody.x[j]+=dx;curbBody.x[j+1]+=dy;curbBody.x[j+2]+=dz;}curbBody.previous.set(curbBody.x);curbBody.updateCenter();};
@@ -68,13 +69,17 @@ assert(peakPitch>.03,'front/rear contacts pitch the frame');
 assert(bike.position.distanceTo(approach)>.16,'pen does not block passage');
 assert(minJ>.12,'bump forces preserve cage orientation');
 
-class Controls extends EventDispatcher {target=new Vector3();enableDamping=true;update(){}}
+class Controls extends EventDispatcher {target=new Vector3();enableDamping=true;maxPolarAngle=1.10;update(){}}
 const controls=new Controls(),camera=new PerspectiveCamera(),chase=new TricycleCamera(controls);
 camera.position.set(.2,.15,.2);chase.update(camera,0,1/60);
 assert(camera.position.z<0,'mount places camera behind forward +Z');
+const mountOffset=camera.position.clone().sub(controls.target),mountPhi=Math.acos(mountOffset.y/mountOffset.length());
+assert(Math.abs(mountPhi-controls.maxPolarAngle)<1e-12,'mount uses the lowest allowed grazing camera angle');
 controls.dispatchEvent({type:'start'});camera.position.set(.2,.12,0);chase.update(camera,0,.1);assert.equal(camera.position.x,.2,'manual orbit has priority');
 controls.dispatchEvent({type:'end'});
 for(let i=0;i<60;i++)chase.update(camera,0,1/60);
+const returnedOffset=camera.position.clone().sub(controls.target),returnedPhi=Math.acos(returnedOffset.y/returnedOffset.length());
 assert(Math.abs(camera.position.x)<.001&&camera.position.z<0,'release returns smoothly in under a second');
+assert(Math.abs(returnedPhi-controls.maxPolarAngle)<.001,'release returns to the lowest allowed grazing angle');
 const before=camera.position.clone();chase.update(camera,undefined,.1);assert(camera.position.equals(before),'walking camera unchanged');assert(controls.enableDamping);chase.dispose();
-track.dispose();console.log({width,portalClearance,arrivalClearance,peakHeight,peakPitch,minJ});console.log('Twofold track layout, finite jumpable curbs, deliberate prop placement, rolling pen contact, soft rider and chase/orbit handoff passed.');
+track.dispose();console.log({width,portalClearance,arrivalClearance,peakHeight,peakPitch,minJ});console.log('Twofold track layout, broad walkable curbs, deliberate prop placement, rolling pen contact, soft rider and grazing chase/orbit handoff passed.');

@@ -55,8 +55,9 @@ offset and orbit controls until every grip is released.
 Movement is represented as a set of active commands. `WASD` and the arrow keys
 are camera-relative: the input layer flattens the camera's forward direction,
 constructs a horizontal basis, and gives the locomotion rig a normalized vector.
-`Space` queues a jump and `R` resets. `E` is reserved for facility interaction;
-`Escape` releases all grips.
+`Space` queues a jump. Reset is available only from the reset button; `R` has no
+gameplay binding. `E` is reserved for facility interaction; `Escape` releases
+all grips.
 
 Near an available head-wearable slot, `E` uses the same shared facility route to wear the nearest item and the touch button reads `Wear <name>`. While an item is worn, approaching a different table item changes the prompt to `Swap to <name>`, and walking away from the table changes it to `Take off <name>`. The ordinary Space jump also drives the wearable's short local detachment; facility-controlled motion and grabs do not.
 

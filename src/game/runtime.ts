@@ -63,7 +63,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const physicsClock=new FixedStepper(PHYS.step);
   let lastTime=0,disposed=false;
   const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();};
-  const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound,reset);
+  const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound);
   input.bodyControlled=()=>worlds.loading||!!worlds.facilities.active;
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
   input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};

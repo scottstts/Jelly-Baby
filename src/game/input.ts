@@ -50,11 +50,9 @@ export class Input {
   readonly mesh:THREE.Mesh;
   readonly rig:Locomotion;
   readonly sound:JellySound;
-  readonly reset:()=>void;
   constructor(camera:THREE.PerspectiveCamera,canvas:HTMLCanvasElement,
-    body:SoftBody,mesh:THREE.Mesh,rig:Locomotion,sound:JellySound,
-    reset:()=>void) {
-    this.camera=camera;this.body=body;this.mesh=mesh;this.rig=rig;this.sound=sound;this.reset=reset;
+    body:SoftBody,mesh:THREE.Mesh,rig:Locomotion,sound:JellySound) {
+    this.camera=camera;this.body=body;this.mesh=mesh;this.rig=rig;this.sound=sound;
     this.canvas=canvas;this.grabBVH=new SurfaceBVH(body.surface);
     this.controls=new OrbitControls(camera,canvas);
     this.chase=new TricycleCamera(this.controls);
@@ -225,7 +223,6 @@ export class Input {
       e.preventDefault();this.keys.add(e.code);void this.sound.unlock().catch(()=>{});
     }
     if(e.code==='Space'&&!e.repeat&&!this.bodyControlled())this.rig.jump();
-    if(e.code==='KeyR'&&!e.repeat)this.reset();
     if(e.code==='Escape')this.finishRelease();
   };
   clear=()=>{

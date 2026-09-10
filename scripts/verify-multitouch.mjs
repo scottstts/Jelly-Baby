@@ -24,7 +24,7 @@ function setup(useJS=false) {
     input.end(event(id,'lostpointercapture'));
   };
   const camera=new PerspectiveCamera(40,400/600,.001,10);camera.position.set(0,.12,.22);
-  const input=new Input(camera,canvas,body,new Mesh(body.surface.geometry),new Locomotion(body),{unlock:async()=>{}},()=>{});
+  const input=new Input(camera,canvas,body,new Mesh(body.surface.geometry),new Locomotion(body),{unlock:async()=>{}});
   const event=(id,type='pointerdown',dx=0,dy=0,pointerType='touch')=>{
     const point=new Vector3(id===1?-.009:.009,.045,0).project(camera);
     return {pointerId:id,pointerType,button:0,buttons:1,type,

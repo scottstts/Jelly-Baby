@@ -90,7 +90,7 @@ field must receive the post-physics body rather than a one-frame-old pose.
 
 ## Reset and lifetime
 
-Reset is shared by the reset button and `R`:
+Reset is initiated from the reset button only:
 
 - stop facility voices and reset both facility simulations;
 - clear pointers and recenter the locomotion rig;

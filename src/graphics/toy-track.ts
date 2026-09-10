@@ -2,7 +2,7 @@ import * as T from 'three/webgpu';
 import { batch, disposeParts, enamel, part, rod, rounded } from './toy-parts.ts';
 import {
   box, obstacles, trackCurve, trackPoint, roadLocation, ROAD_HEIGHT, CURB_HEIGHT,
-  CURB_COLLISION_WIDTH, TRACK_LOCATION_SEGMENTS, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, TRACK_WIDTH,
+  CURB_CENTER_OFFSET, CURB_OUTER_EDGE, CURB_WIDTH, TRACK_LOCATION_SEGMENTS, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, TRACK_WIDTH,
 } from '../game/toy-track-layout.ts';
 import { TRACK_PORTAL } from '../game/toy-world-layout.ts';
 import { makeToyRoad } from './toy-road.ts';
@@ -10,7 +10,6 @@ import { turned } from './manufactured-geometry.ts';
 import type { CollisionBox } from '../physics/facility-collision.ts';
 import { tricycleBoxCollider, tricycleCircleCollider, type TricycleCollider } from '../game/tricycle-collision.ts';
 
-const CURB_CENTER_OFFSET=.001;
 const CURB_NEIGHBOR_SEGMENTS=6;
 const CURB_ACTIVE_BOX_COUNT=2*(CURB_NEIGHBOR_SEGMENTS*2+1);
 const CURB_ACTIVE_DISTANCE=.11;
@@ -34,8 +33,8 @@ export class ToyTrack {
     this.makeWalkingCurbs();
     const tangent=trackCurve.getTangentAt(0);
     // Walking collision contains only the raised curb volume, never the 3 mm
-    // road slab. The curb therefore blocks a grounded approach but has a real
-    // finite top that the jelly can clear with an ordinary jump.
+    // road slab. Its broad top is intentionally walkable: the baby can jump
+    // onto the curb, cross it on foot, then step down onto or off the road.
     const blue=enamel(0x659bbd),red=enamel(0xd77565),pink=enamel(0xf1b4ad),rubber=enamel(0x536268,.7);
     for(const obstacle of obstacles) {
       const g=new T.Group();g.name=obstacle.kind;this.group.add(g);g.position.set(obstacle.x,ROAD_HEIGHT,obstacle.z);g.rotation.y=obstacle.yaw;
@@ -89,7 +88,7 @@ export class ToyTrack {
       // Only the trees inside the loop belong to the scaled central village.
       // Outside trees keep their object scale and are merely repositioned just
       // beyond the wider curb.
-      const offset=infield?-.14*TRACK_RADIUS_SCALE:TRACK_WIDTH/2+.04,p=trackPoint(t,offset);
+      const offset=infield?-.14*TRACK_RADIUS_SCALE:CURB_OUTER_EDGE+.034,p=trackPoint(t,offset);
       if(p.distanceTo(portalPosition)<.30)continue;
       const tree=new T.Group();tree.name=infield?'scaled-infield-tree':'trackside-tree';tree.position.set(p.x,0,p.z);tree.scale.setScalar(infield?TRACK_SCENERY_SCALE:1);this.group.add(tree);
       part(tree,new T.CylinderGeometry(.002,.003,.026,8),gold,0,.013,0);
@@ -97,7 +96,7 @@ export class ToyTrack {
       part(tree,new T.CylinderGeometry(.013,.015,.004,12),cream,0,.002,0);
     }
     // Start bunting is repositioned to the wider curb but retains its original scale.
-    const gantryOffset=TRACK_WIDTH/2+.006;
+    const gantryOffset=CURB_OUTER_EDGE+.006;
     for(const side of [-1,1]) {
       const p=trackPoint(0,side*gantryOffset);rod(this.group,p.clone(),p.clone().setY(.14),.002,gold);
       part(this.group,new T.SphereGeometry(.004,10,8),coral,p.x,.14,p.z);
@@ -116,7 +115,7 @@ export class ToyTrack {
       for(let i=0;i<TRACK_LOCATION_SEGMENTS;i++) {
         const a=trackPoint(i/TRACK_LOCATION_SEGMENTS,side*lateral),b=trackPoint((i+1)/TRACK_LOCATION_SEGMENTS,side*lateral);
         const dx=b.x-a.x,dz=b.z-a.z;
-        const segment=box((a.x+b.x)/2,CURB_HEIGHT/2,(a.z+b.z)/2,CURB_COLLISION_WIDTH,CURB_HEIGHT,Math.hypot(dx,dz)+.0015,Math.atan2(dx,dz));
+        const segment=box((a.x+b.x)/2,CURB_HEIGHT/2,(a.z+b.z)/2,CURB_WIDTH,CURB_HEIGHT,Math.hypot(dx,dz)+.0015,Math.atan2(dx,dz));
         segment.margin=.0008;
         segments.push(segment);this.curbBoxes.push(segment);
       }

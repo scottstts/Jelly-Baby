@@ -8,7 +8,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML=`
     <button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false" title="Sound">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-off" d="m15 9 6 6m0-6-6 6"/></svg>
     </button>
-    <button id="reset" class="icon-button" aria-label="Reset jelly baby" title="Reset · R">
+    <button id="reset" class="icon-button" aria-label="Reset jelly baby" title="Reset">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 8a8 8 0 1 1-.1 8M4 3v6h6"/></svg>
     </button>
     ${flavorPickerMarkup()}

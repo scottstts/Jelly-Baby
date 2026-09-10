@@ -23,7 +23,8 @@ export class TricycleCamera {
     c.enableDamping=false;
     this.offset.copy(camera.position).sub(c.target);this.spherical.setFromVector3(this.offset);
     this.spherical.theta=this.wasRiding?chaseAngle(this.spherical.theta,yaw+Math.PI,dt):yaw+Math.PI;
-    this.spherical.phi=this.wasRiding?this.spherical.phi+(.86-this.spherical.phi)*(1-Math.exp(-10*dt)):.86;
+    const defaultPhi=c.maxPolarAngle;
+    this.spherical.phi=this.wasRiding?this.spherical.phi+(defaultPhi-this.spherical.phi)*(1-Math.exp(-10*dt)):defaultPhi;
     this.spherical.radius=Math.max(.25,this.spherical.radius);
     this.offset.setFromSpherical(this.spherical);camera.position.copy(c.target).add(this.offset);c.update();this.wasRiding=true;
   }

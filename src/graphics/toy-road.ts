@@ -1,16 +1,20 @@
 import * as T from 'three/webgpu';
 import { float, mix, positionLocal, uv, vec2, vec3 } from 'three/tsl';
-import { trackPoint, trackCurve, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT } from '../game/toy-track-layout.ts';
+import { trackPoint, trackCurve, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT, CURB_OUTER_EDGE, CURB_ROAD_EDGE } from '../game/toy-track-layout.ts';
 import { solidLoft } from './manufactured-geometry.ts';
 import { enamel, part } from './toy-parts.ts';
 
 export function makeToyRoad(root:T.Group) {
   const half=TRACK_WIDTH/2;
+  const leftOuter=-CURB_OUTER_EDGE,leftRoad=-CURB_ROAD_EDGE;
+  const rightRoad=CURB_ROAD_EDGE,rightOuter=CURB_OUTER_EDGE;
   // One continuous closed slab: top, underside, chamfers and raised curbs.
-  const section=[[-half-.006,0],[-half-.006,CURB_HEIGHT-.002],[-half-.004,CURB_HEIGHT],[-half+.002,CURB_HEIGHT],
-    [-half+.004,CURB_HEIGHT-.002],[-half+.004,ROAD_HEIGHT+.001],[-half+.005,ROAD_HEIGHT],
-    [half-.005,ROAD_HEIGHT],[half-.004,ROAD_HEIGHT+.001],[half-.004,CURB_HEIGHT-.002],
-    [half-.002,CURB_HEIGHT],[half+.004,CURB_HEIGHT],[half+.006,CURB_HEIGHT-.002],[half+.006,0]];
+  // Widen only away from the asphalt: outer-loop curb grows outward and the
+  // inner-loop curb grows into the infield, preserving the original road width.
+  const section=[[leftOuter,0],[leftOuter,CURB_HEIGHT-.002],[leftOuter+.002,CURB_HEIGHT],[leftRoad-.002,CURB_HEIGHT],
+    [leftRoad,CURB_HEIGHT-.002],[leftRoad,ROAD_HEIGHT+.001],[leftRoad+.001,ROAD_HEIGHT],
+    [rightRoad-.001,ROAD_HEIGHT],[rightRoad,ROAD_HEIGHT+.001],[rightRoad,CURB_HEIGHT-.002],
+    [rightRoad+.002,CURB_HEIGHT],[rightOuter-.002,CURB_HEIGHT],[rightOuter,CURB_HEIGHT-.002],[rightOuter,0]];
   const rings=Array.from({length:512},(_,i)=>section.map(([offset,y])=>{const p=trackPoint(i/512,offset);return [p.x,y,p.z];}));
   const geometry=solidLoft(rings,true);
   // Store longitudinal distance and lateral offset per emitted vertex. Paint is

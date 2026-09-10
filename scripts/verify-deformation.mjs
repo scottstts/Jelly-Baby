@@ -31,7 +31,7 @@ for(const {name,hz,grips,hold,useJS} of [
   canvas.setPointerCapture=id=>captured.add(id);canvas.hasPointerCapture=id=>captured.has(id);
   canvas.releasePointerCapture=id=>captured.delete(id);
   const camera=new PerspectiveCamera(40,400/600,.001,10);camera.position.set(0,.12,.22);
-  const input=new Input(camera,canvas,body,new Mesh(body.surface.geometry),rig,{unlock:async()=>{}},()=>{});
+  const input=new Input(camera,canvas,body,new Mesh(body.surface.geometry),rig,{unlock:async()=>{}});
   try {
     const starts=Array.from({length:grips},(_,k)=>{
       const point=new Vector3(k===0?-.009:k===1?.009:0,k===2?.061:.045,0).project(camera);

@@ -1,5 +1,5 @@
 import type { CollisionBox } from '../physics/facility-collision.ts';
-import { ROAD_HEIGHT, TRACK_WIDTH, roadLocation } from './toy-track-layout.ts';
+import { CURB_ROAD_EDGE, ROAD_HEIGHT, roadLocation } from './toy-track-layout.ts';
 
 export const WHEEL_CONTACTS=[{x:0,z:.056,r:.023},{x:-.036,z:-.034,r:.015},{x:.036,z:-.034,r:.015}];
 export function wheelHeight(x:number,z:number,r:number,boxes:readonly CollisionBox[]) {
@@ -23,7 +23,7 @@ export function constrainToRoad(position:{x:number;z:number},yaw:number) {
     const x=position.x+Math.cos(yaw)*wheel.x+Math.sin(yaw)*wheel.z,z=position.z-Math.sin(yaw)*wheel.x+Math.cos(yaw)*wheel.z;
     const nearest=roadLocation(x,z),normalX=(nearest.x-x)/Math.max(1e-9,nearest.distance),normalZ=(nearest.z-z)/Math.max(1e-9,nearest.distance);
     const support=.004*Math.abs(normalX*Math.cos(yaw)-normalZ*Math.sin(yaw))+wheel.r*Math.abs(normalX*Math.sin(yaw)+normalZ*Math.cos(yaw));
-    const limit=TRACK_WIDTH/2-.006-support;
+    const limit=CURB_ROAD_EDGE-.002-support;
     if(nearest.distance<=limit)continue;
     const nx=(nearest.x-x)/nearest.distance,nz=(nearest.z-z)/nearest.distance,depth=nearest.distance-limit;
     position.x+=nx*depth;position.z+=nz*depth;hitX=nx;hitZ=nz;localX=wheel.x;localZ=wheel.z;hit=true;

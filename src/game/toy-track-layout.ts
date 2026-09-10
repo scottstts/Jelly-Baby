@@ -7,7 +7,12 @@ export const TRACK_SCENERY_SCALE=2;
 export const TRACK_WIDTH=BASE_TRACK_WIDTH*1.5;
 export const ROAD_HEIGHT=.003;
 export const CURB_HEIGHT=.019;
-export const CURB_COLLISION_WIDTH=.010;
+/** Raised border width. Mesh and walking collision intentionally share this value. */
+export const CURB_WIDTH=.050;
+/** Preserve the original asphalt-facing curb edge while widening away from the road. */
+export const CURB_ROAD_EDGE=TRACK_WIDTH/2-.004;
+export const CURB_CENTER_OFFSET=CURB_ROAD_EDGE+CURB_WIDTH/2-TRACK_WIDTH/2;
+export const CURB_OUTER_EDGE=CURB_ROAD_EDGE+CURB_WIDTH;
 export const TRACK_LOCATION_SEGMENTS=256;
 const obstacleOffsetScale=TRACK_WIDTH/BASE_TRACK_WIDTH;
 

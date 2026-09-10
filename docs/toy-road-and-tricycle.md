@@ -12,14 +12,16 @@ tricycle starts on the new centerline, and the portal is placed outside the road
 with authored clearance.
 
 The 3 mm road slab remains visual-only to the walking jelly and uses the
-underlying tabletop floor for support. The raised curbs are different: they now
-have dedicated finite-height walking collision matching the visible 19 mm curb.
-Only a short run of curb segments near the baby enters the 240 Hz narrow phase.
-This prevents the old road-slab side face from acting like an invisible wall,
-while still making a grounded baby collide with the curb and allowing an
-ordinary jump to clear its real top. The tricycle continues to use its separate
-wheel/road constraint, so it remains confined to the track whether occupied or
-parked.
+underlying tabletop floor for support. The raised curbs are different: they have
+dedicated finite-height walking collision matching the visible 19 mm height and
+5 cm width. Widening preserves the original asphalt-facing edge: the outer
+curb grows away from the track and the inner curb grows into the infield. Its
+top is therefore broad enough for the baby to jump onto, walk across, and then
+step down onto or off the road without narrowing the drivable asphalt. Mesh and
+collision use the same width constant. Only a short run of curb segments near
+the baby enters the 240 Hz narrow phase. The tricycle's separate wheel/road
+constraint still uses the unchanged road-facing curb edge, so its driving
+boundary is not loosened by the wider walking platform.
 
 The road keeps its coral borders, connector seams, brass pins, center dashes and
 a checkered start beneath bunting. A studded brick, pen, bottle, eraser and
@@ -50,6 +52,11 @@ different from camera-relative walking. E and the shared mobile button board
 or dismount. Coasting has rolling drag, steering has finite response, and yaw
 follows wheelbase curvature with a bounded rate. Forward speed caps at 34 cm/s,
 reverse at 10 cm/s.
+
+While mounted, the chase camera's authored resting pose uses the maximum allowed
+OrbitControls polar angle, which is the lowest/grazing view permitted by the
+normal camera limits. Manual orbit still takes priority while dragging; after
+release the existing chase return brings yaw and polar angle back to that pose.
 
 The driven motion remains a bounded planar bicycle approximation, but obstacle
 contacts use a small planar rigid-body response instead of simply cutting
@@ -98,7 +105,7 @@ allowing a later genuine re-impact to sound again.
 orientation stability, seat retention, ejection, facial timing, standing
 recovery, impact event gating, glancing rigid-body response, constant-length
 steering links and batched geometry. `npm run test:toy-driving` additionally
-checks the twofold layout and 30 cm road width, road confinement, finite
-jump-clear curb collision, localized curb narrow phase, portal clearance,
-unscaled obstacle dimensions with width-relative placement, enlarged house
+checks the twofold layout and 30 cm road width, widened-curb road confinement,
+finite 5 cm-wide walkable curb collision, localized curb narrow phase, portal
+clearance, unscaled obstacle dimensions with width-relative placement, enlarged house
 collision, authored obstacle footprints and low-pen wheel contact.
