@@ -62,7 +62,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   rig.onContact=(speed,foot)=>sound.contact(speed,foot);
   const physicsClock=new FixedStepper(PHYS.step);
   let lastTime=0,disposed=false;
-  const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.inToys?Math.PI:0;baby.resetFace();physicsClock.reset();};
+  const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();};
   const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound,reset);
   input.bodyControlled=()=>worlds.loading||!!worlds.facilities.active;
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
@@ -73,7 +73,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   worlds.toyFacilities.onInteract=facilities.onInteract;
   worlds.onMove=()=>{input.clear();sound.stopFacilities();physicsClock.reset();};
   worlds.onReady=async()=>{
-    input.teleport();rig.yaw=worlds.inToys?Math.PI:0;baby.resetFace();physicsClock.reset();
+    input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();
     if(worlds.tricycle)worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
     baby.update();optics.update(renderer,body,true);transport.follow();await transport.update();
   };

@@ -9,7 +9,8 @@ source and the verification suite exercises the same modules used by the game.
 The toy world and tricycle use authored procedural meshes, with no new texture
 downloads. `npm run test:tricycle` covers drive, soft-body coupling, crash faces,
 steering links and geometry budgets. `npm run test:world-travel` uses a renderer
-stub for round trips, loading ownership, cooldown, reuse, reset and disposal;
+stub for camera-side/camera-facing arrivals, round trips, loading ownership,
+cooldown, reuse, reset and disposal;
 it does not replace visual WebGPU inspection.
 
 | Location | Role | Ownership |

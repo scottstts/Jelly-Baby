@@ -2,7 +2,7 @@ import { Scene, Vector3, type WebGPURenderer, type PerspectiveCamera } from 'thr
 import type { SoftBody } from '../physics/soft-body.js';
 import type { FacilityShadows } from '../graphics/facility-shadows.ts';
 import { HOME_PORTAL, JellyPortal } from '../graphics/jelly-portal.ts';
-import { TRACK_PORTAL } from './toy-world-layout.ts';
+import { cameraFacingYaw, portalArrivalZ, TRACK_PORTAL } from './toy-world-layout.ts';
 import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
 import { Facilities } from './facilities.ts';
 import type { TricycleFacility } from './tricycle-facility.ts';
@@ -17,6 +17,7 @@ export class WorldTravel {
   tricycle:TricycleFacility|undefined;
   inToys=false;
   loading=false;
+  arrivalYaw=0;
   private cooldown=1;
   private readonly previous=new Vector3();
   private disposed=false;
@@ -37,14 +38,24 @@ export class WorldTravel {
   }
   get facilities(){return this.inToys?this.toyFacilities:this.homeFacilities;}
   reset() {
+    const toyArrivalZ=this.inToys?portalArrivalZ(TRACK_PORTAL.z,this.body.center.z,this.camera.position.z):0;
+    const toyArrivalYaw=this.inToys?cameraFacingYaw(this.body.center.x,this.body.center.z,this.camera.position.x,this.camera.position.z):0;
     this.facilities.reset();this.body.reset();
-    if(this.inToys)this.place(TRACK_PORTAL.x,TRACK_PORTAL.z-.10);else this.previous.copy(this.body.center);
+    if(this.inToys){this.arrivalYaw=toyArrivalYaw;this.place(TRACK_PORTAL.x,toyArrivalZ,toyArrivalYaw);}else {this.arrivalYaw=0;this.previous.copy(this.body.center);}
     this.cooldown=1;
   }
-  private place(x:number,z:number) {
+  private placeAtPortal(portal:{x:number;z:number}) {
+    const z=portalArrivalZ(portal.z,this.body.center.z,this.camera.position.z);
+    const yaw=cameraFacingYaw(this.body.center.x,this.body.center.z,this.camera.position.x,this.camera.position.z);
+    this.arrivalYaw=yaw;this.place(portal.x,z,yaw);
+  }
+  private place(x:number,z:number,yaw:number) {
     const b=this.body;b.reset();
-    const cx=b.center.x,cz=b.center.z,sign=this.inToys?-1:1;
-    for(let j=0;j<b.x.length;j+=3){b.x[j]=x+sign*(b.x[j]-cx);b.x[j+2]=z+sign*(b.x[j+2]-cz);}
+    const cx=b.center.x,cz=b.center.z,c=Math.cos(yaw),s=Math.sin(yaw);
+    for(let j=0;j<b.x.length;j+=3) {
+      const rx=b.x[j]-cx,rz=b.x[j+2]-cz;
+      b.x[j]=x+rx*c+rz*s;b.x[j+2]=z+rz*c-rx*s;
+    }
     b.previous.set(b.x);b.updateCenter();b.updateSurface();this.previous.copy(b.center);
   }
   step(h:number) {
@@ -78,7 +89,7 @@ export class WorldTravel {
     this.homeFacilities.enabled=!this.inToys;this.toyFacilities.enabled=this.inToys;
     this.homeFacilities.update();this.toyFacilities.update();
     const portal=this.inToys?TRACK_PORTAL:HOME_PORTAL;
-    this.place(portal.x,portal.z+(this.inToys?-.10:.10));this.cooldown=1;
+    this.placeAtPortal(portal);this.cooldown=1;
     await this.onReady();this.stage('Settling into the little world');
     const shadowRevision=this.shadows.update(this.renderer);
     this.shadows.surfaces.update(this.renderer,shadowRevision);

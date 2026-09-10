@@ -1,26 +1,41 @@
 import * as T from 'three/webgpu';
 import { batch, disposeParts, enamel, part, rod, rounded } from './toy-parts.ts';
-import { box, obstacles, trackCurve, trackPoint, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT } from '../game/toy-track-layout.ts';
+import {
+  box, obstacles, trackCurve, trackPoint, roadLocation, ROAD_HEIGHT, CURB_HEIGHT,
+  CURB_COLLISION_WIDTH, TRACK_LOCATION_SEGMENTS, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, TRACK_WIDTH,
+} from '../game/toy-track-layout.ts';
+import { TRACK_PORTAL } from '../game/toy-world-layout.ts';
 import { makeToyRoad } from './toy-road.ts';
 import { turned } from './manufactured-geometry.ts';
 import type { CollisionBox } from '../physics/facility-collision.ts';
+import { tricycleBoxCollider, tricycleCircleCollider, type TricycleCollider } from '../game/tricycle-collision.ts';
+
+const CURB_CENTER_OFFSET=.001;
+const CURB_NEIGHBOR_SEGMENTS=6;
+const CURB_ACTIVE_BOX_COUNT=2*(CURB_NEIGHBOR_SEGMENTS*2+1);
+const CURB_ACTIVE_DISTANCE=.11;
 
 /** A manufactured ribbon with inset seams, contrasting rolled edges and tabletop props. */
 export class ToyTrack {
   readonly group=new T.Group();
+  /** Solid scenery for the walking baby; the road slab itself is intentionally absent. */
   readonly boxes:CollisionBox[]=[];
   readonly obstacleBoxes:CollisionBox[]=[];
+  readonly vehicleColliders:TricycleCollider[]=[];
+  /** Exact-height curb segments used only by walking collision. */
+  readonly curbBoxes:CollisionBox[]=[];
+  readonly curbActiveBoxCount=CURB_ACTIVE_BOX_COUNT;
+  private readonly curbSegments:[CollisionBox[],CollisionBox[]]=[[],[]];
+  private readonly activeCurbs:CollisionBox[]=[];
   constructor(keepParts=false) {
     this.group.name='toy-track';this.group.userData.keepParts=keepParts;
     const coral=enamel(0xe7917f),cream=enamel(0xffecc5),ink=enamel(0x38555b),gold=enamel(0xd8b36c);
     makeToyRoad(this.group);
+    this.makeWalkingCurbs();
     const tangent=trackCurve.getTangentAt(0);
-    // Walking contacts follow the same cross-section as the manufactured road.
-    for(let i=0;i<128;i++) {
-      const t=(i+.5)/128,p=trackPoint(t),v=trackCurve.getTangentAt(t),yaw=Math.atan2(v.x,v.z),length=trackCurve.getLength()/128+.001;
-      this.boxes.push(box(p.x,ROAD_HEIGHT/2,p.z,TRACK_WIDTH,ROAD_HEIGHT,length,yaw));
-      for(const side of [-1,1]){const q=trackPoint(t,side*(TRACK_WIDTH/2+.001));this.boxes.push(box(q.x,CURB_HEIGHT/2,q.z,.010,CURB_HEIGHT,length,yaw));}
-    }
+    // Walking collision contains only the raised curb volume, never the 3 mm
+    // road slab. The curb therefore blocks a grounded approach but has a real
+    // finite top that the jelly can clear with an ordinary jump.
     const blue=enamel(0x659bbd),red=enamel(0xd77565),pink=enamel(0xf1b4ad),rubber=enamel(0x536268,.7);
     for(const obstacle of obstacles) {
       const g=new T.Group();g.name=obstacle.kind;this.group.add(g);g.position.set(obstacle.x,ROAD_HEIGHT,obstacle.z);g.rotation.y=obstacle.yaw;
@@ -50,37 +65,73 @@ export class ToyTrack {
       }
       const obstacleBox=box(obstacle.x,ROAD_HEIGHT+size[1]/2,obstacle.z,...size as [number,number,number],obstacle.yaw);
       this.boxes.push(obstacleBox);this.obstacleBoxes.push(obstacleBox);
+      if(obstacle.kind==='bottle')this.vehicleColliders.push(tricycleCircleCollider(obstacle.x,obstacle.z,.022));
+      else if(obstacle.kind==='spool')this.vehicleColliders.push(tricycleCircleCollider(obstacle.x,obstacle.z,.020));
+      else if(obstacle.kind!=='pen')this.vehicleColliders.push(tricycleBoxCollider(obstacleBox,obstacle.kind==='brick'?.002:obstacle.kind==='eraser'?.004:0));
     }
-    // Hand-painted wooden village in the infield; doors, chimneys and roofs read at riding height.
-    for(const [x,z,color] of [[-.12,-.08,0xe4b370],[.035,-.13,0xc78582],[.17,.04,0x80aaa0],[-.14,.13,0x81a6bd]]) {
-      const g=new T.Group();g.position.set(x,0,z);this.group.add(g);
+    // The infield village scales with the larger world; road obstacles do not.
+    for(const [baseX,baseZ,color] of [[-.12,-.08,0xe4b370],[.035,-.13,0xc78582],[.17,.04,0x80aaa0],[-.14,.13,0x81a6bd]]) {
+      const x=baseX*TRACK_SCENERY_SCALE,z=baseZ*TRACK_SCENERY_SCALE;
+      const g=new T.Group();g.name='scaled-infield-house';g.position.set(x,0,z);g.scale.setScalar(TRACK_SCENERY_SCALE);this.group.add(g);
       const walls=enamel(color);rounded(g,[.069,.050,.056],walls,0,.025,0,.003);
       const roof=new T.Shape();roof.moveTo(-.041,0);roof.lineTo(0,.030);roof.lineTo(.041,0);roof.closePath();
       const roofMesh=part(g,new T.ExtrudeGeometry(roof,{depth:.067,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.001,bevelThickness:.001}),red,0,.05,-.0335);
       roofMesh.name='painted pitched roof';rounded(g,[.012,.018,.012],cream,.023,.066,-.012);
       rounded(g,[.013,.026,.002],ink,0,.014,.029);
       for(const side of [-1,1]){rounded(g,[.013,.014,.002],cream,side*.023,.031,.029);rounded(g,[.001,.014,.0005],gold,side*.023,.031,.0305);}
-      const houseBox=box(x,.041,z,.083,.082,.07);this.boxes.push(houseBox);this.obstacleBoxes.push(houseBox);
-      for(let i=0;i<4;i++)rounded(this.group,[.014,.001,.010],cream,x,.0006,z+.044+i*.015,.003);
+      const houseBox=box(x,.041*TRACK_SCENERY_SCALE,z,.083*TRACK_SCENERY_SCALE,.082*TRACK_SCENERY_SCALE,.07*TRACK_SCENERY_SCALE);
+      this.boxes.push(houseBox);this.obstacleBoxes.push(houseBox);this.vehicleColliders.push(tricycleBoxCollider(houseBox));
+      for(let i=0;i<4;i++)rounded(this.group,[.014,.001,.010],cream,x,.0006,z+(.044+i*.015)*TRACK_SCENERY_SCALE,.003);
     }
+    const portalPosition=new T.Vector3(TRACK_PORTAL.x,0,TRACK_PORTAL.z);
     for(let i=0;i<14;i++) {
-      const t=i/14,p=trackPoint(t,i%2?.14:-.14);
-      if(p.distanceTo(new T.Vector3(.47,0,.40))<.18)continue;
-      part(this.group,new T.CylinderGeometry(.002,.003,.026,8),gold,p.x,.013,p.z);
-      part(this.group,new T.SphereGeometry(.014,12,8),i%2?blue:coral,p.x,.034,p.z).scale.set(.8,1.4,.8);
-      part(this.group,new T.CylinderGeometry(.013,.015,.004,12),cream,p.x,.002,p.z);
+      const t=i/14,infield=i%2===0;
+      // Only the trees inside the loop belong to the scaled central village.
+      // Outside trees keep their object scale and are merely repositioned just
+      // beyond the wider curb.
+      const offset=infield?-.14*TRACK_RADIUS_SCALE:TRACK_WIDTH/2+.04,p=trackPoint(t,offset);
+      if(p.distanceTo(portalPosition)<.30)continue;
+      const tree=new T.Group();tree.name=infield?'scaled-infield-tree':'trackside-tree';tree.position.set(p.x,0,p.z);tree.scale.setScalar(infield?TRACK_SCENERY_SCALE:1);this.group.add(tree);
+      part(tree,new T.CylinderGeometry(.002,.003,.026,8),gold,0,.013,0);
+      part(tree,new T.SphereGeometry(.014,12,8),i%2?blue:coral,0,.034,0).scale.set(.8,1.4,.8);
+      part(tree,new T.CylinderGeometry(.013,.015,.004,12),cream,0,.002,0);
     }
-    // Start bunting and a low pit mat, kept clear of the driving line.
+    // Start bunting is repositioned to the wider curb but retains its original scale.
+    const gantryOffset=TRACK_WIDTH/2+.006;
     for(const side of [-1,1]) {
-      const p=trackPoint(0,side*.106);rod(this.group,p.clone(),p.clone().setY(.14),.002,gold);
+      const p=trackPoint(0,side*gantryOffset);rod(this.group,p.clone(),p.clone().setY(.14),.002,gold);
       part(this.group,new T.SphereGeometry(.004,10,8),coral,p.x,.14,p.z);
     }
-    const a=trackPoint(0,-.106).setY(.137),b=trackPoint(0,.106).setY(.137);rod(this.group,a,b,.0008,rubber);
+    const a=trackPoint(0,-gantryOffset).setY(.137),b=trackPoint(0,gantryOffset).setY(.137);rod(this.group,a,b,.0008,rubber);
     for(let i=0;i<9;i++) {
       const p=a.clone().lerp(b,(i+.5)/9);const shape=new T.Shape();shape.moveTo(-.008,0);shape.lineTo(.008,0);shape.lineTo(0,-.018);shape.closePath();
       const flag=part(this.group,new T.ShapeGeometry(shape),i%2?coral:cream,p.x,p.y,p.z);flag.material.side=T.DoubleSide;flag.rotation.y=Math.atan2(tangent.x,tangent.z);
     }
     batch(this.group);
+  }
+  private makeWalkingCurbs() {
+    const lateral=TRACK_WIDTH/2+CURB_CENTER_OFFSET;
+    for(const [sideIndex,side] of [-1,1].entries()) {
+      const segments=this.curbSegments[sideIndex as 0|1];
+      for(let i=0;i<TRACK_LOCATION_SEGMENTS;i++) {
+        const a=trackPoint(i/TRACK_LOCATION_SEGMENTS,side*lateral),b=trackPoint((i+1)/TRACK_LOCATION_SEGMENTS,side*lateral);
+        const dx=b.x-a.x,dz=b.z-a.z;
+        const segment=box((a.x+b.x)/2,CURB_HEIGHT/2,(a.z+b.z)/2,CURB_COLLISION_WIDTH,CURB_HEIGHT,Math.hypot(dx,dz)+.0015,Math.atan2(dx,dz));
+        segment.margin=.0008;
+        segments.push(segment);this.curbBoxes.push(segment);
+      }
+    }
+  }
+  /** Return only curb segments near the baby, keeping the 240 Hz narrow phase bounded. */
+  curbsNear(x:number,z:number) {
+    const nearest=roadLocation(x,z),out=this.activeCurbs;out.length=0;
+    if(Math.abs(nearest.distance-TRACK_WIDTH/2)>CURB_ACTIVE_DISTANCE)return out;
+    const center=Math.floor(nearest.t*TRACK_LOCATION_SEGMENTS)%TRACK_LOCATION_SEGMENTS;
+    for(let delta=-CURB_NEIGHBOR_SEGMENTS;delta<=CURB_NEIGHBOR_SEGMENTS;delta++) {
+      const index=(center+delta+TRACK_LOCATION_SEGMENTS)%TRACK_LOCATION_SEGMENTS;
+      out.push(this.curbSegments[0][index],this.curbSegments[1][index]);
+    }
+    return out;
   }
   dispose(){disposeParts(this.group);}
 }

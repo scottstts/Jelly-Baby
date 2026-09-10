@@ -12,6 +12,14 @@ import { auditGeometry, logAuditReport } from './geometry-quality-kit/geometry-a
 const body=new SoftBody(loadModel()),grips=fitGrips(body);
 console.log('Skin-fitted grip contacts:',grips);
 const bike=new Tricycle(grips,true),portal=new JellyPortal(0,0,true),track=new ToyTrack(true);
+const infieldHouses=track.group.children.filter(o=>o.name==='scaled-infield-house');
+const infieldTrees=track.group.children.filter(o=>o.name==='scaled-infield-tree');
+const outerTrees=track.group.children.filter(o=>o.name==='trackside-tree');
+assert.equal(infieldHouses.length,4);assert.equal(infieldTrees.length,7);assert.equal(outerTrees.length,7);
+assert(infieldHouses.every(o=>o.scale.x===2&&o.scale.y===2&&o.scale.z===2),'only infield houses use the twofold scenery scale');
+assert(infieldTrees.every(o=>o.scale.x===2&&o.scale.y===2&&o.scale.z===2),'infield trees use the twofold scenery scale');
+assert(outerTrees.every(o=>o.scale.x===1&&o.scale.y===1&&o.scale.z===1),'outer trees keep their original object scale');
+for(const kind of ['brick','pen','bottle','eraser','spool']){const prop=track.group.getObjectByName(kind);assert(prop&&prop.scale.x===1&&prop.scale.y===1&&prop.scale.z===1,`${kind} is repositioned but not scaled`);}
 let failed=0,parts=0;
 function topology(root) {
   root.traverse(mesh=>{

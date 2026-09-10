@@ -4,7 +4,6 @@ import { batch, disposeParts, enamel, part, rounded } from './toy-parts.ts';
 import { closedTube, solidLoft } from './manufactured-geometry.ts';
 
 export const HOME_PORTAL={x:0,z:-.255};
-export const TRACK_PORTAL={x:.52,z:.48};
 export class JellyPortal {
   readonly group=new T.Group();
   private readonly clock=uniform(0);

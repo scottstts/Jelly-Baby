@@ -18,7 +18,7 @@ export function wheelHeight(x:number,z:number,r:number,boxes:readonly CollisionB
   return height;
 }
 export function constrainToRoad(position:{x:number;z:number},yaw:number) {
-  let hitX=0,hitZ=0;
+  let hitX=0,hitZ=0,localX=0,localZ=0,hit=false;
   for(let pass=0;pass<3;pass++)for(const wheel of WHEEL_CONTACTS) {
     const x=position.x+Math.cos(yaw)*wheel.x+Math.sin(yaw)*wheel.z,z=position.z-Math.sin(yaw)*wheel.x+Math.cos(yaw)*wheel.z;
     const nearest=roadLocation(x,z),normalX=(nearest.x-x)/Math.max(1e-9,nearest.distance),normalZ=(nearest.z-z)/Math.max(1e-9,nearest.distance);
@@ -26,7 +26,7 @@ export function constrainToRoad(position:{x:number;z:number},yaw:number) {
     const limit=TRACK_WIDTH/2-.006-support;
     if(nearest.distance<=limit)continue;
     const nx=(nearest.x-x)/nearest.distance,nz=(nearest.z-z)/nearest.distance,depth=nearest.distance-limit;
-    position.x+=nx*depth;position.z+=nz*depth;hitX=nx;hitZ=nz;
+    position.x+=nx*depth;position.z+=nz*depth;hitX=nx;hitZ=nz;localX=wheel.x;localZ=wheel.z;hit=true;
   }
-  return {x:hitX,z:hitZ};
+  return {x:hitX,z:hitZ,localX,localZ,hit};
 }

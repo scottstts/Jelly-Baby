@@ -8,6 +8,7 @@ import { Locomotion } from '../src/game/locomotion.ts';
 import { FaceExpression } from '../src/graphics/face-expression.ts';
 import { Tricycle } from '../src/graphics/tricycle.ts';
 import { ToyTrack } from '../src/graphics/toy-track.ts';
+import { tricycleCircleCollider } from '../src/game/tricycle-collision.ts';
 import { Vector3, Mesh } from 'three/webgpu';
 
 const body=new SoftBody(loadModel()),rig=new Locomotion(body),obstacles=[];
@@ -57,6 +58,21 @@ assert(!bike.crying,'returns to normal after recovery');
 for(let i=0;i<240;i++)face.update(PHYS.step,false,false,false,bike.crying);
 assert(face.sob<.002&&face.laugh===0,'no post-grab laughter after crash');
 bike.reset();assert(!bike.riding&&!bike.crying&&bike.speed===0);
+const sustainedBody=new SoftBody(loadModel()),wall=[box(0,.04,.09,.20,.08,.02)];
+const sustainedBike=new TricyclePhysics(sustainedBody,wall);sustainedBike.position.set(0,0,0);sustainedBike.yaw=0;
+let sustainedImpacts=0;sustainedBike.onCrash=()=>sustainedImpacts++;
+for(let i=0;i<120;i++){sustainedBike.speed=.06;sustainedBike.step(PHYS.step);}
+assert.equal(sustainedImpacts,1,'continuous obstacle contact emits one impact event instead of audio-rate repeats');
+
+const glanceBody=new SoftBody(loadModel());
+const glanceBike=new TricyclePhysics(glanceBody,[],false,[tricycleCircleCollider(.028,.087,.018)]);
+glanceBike.position.set(0,0,0);glanceBike.yaw=0;glanceBike.speed=.24;
+const glanceYaw=glanceBike.yaw;let glanceImpacts=0;glanceBike.onCrash=()=>glanceImpacts++;
+for(let i=0;i<36;i++)glanceBike.step(PHYS.step);
+assert.equal(glanceImpacts,1,'a glancing collision emits one impact event');
+assert(Math.abs(glanceBike.yaw-glanceYaw)>.015,'off-centre collision impulse yaws the tricycle');
+assert(Math.abs(glanceBike.position.x)>.001,'off-centre collision produces lateral rigid-body response');
+
 const model=new Tricycle();
 for(const steer of [-.52,0,.52]) {
   model.update(steer,.2);model.group.updateMatrixWorld(true);
@@ -70,5 +86,5 @@ track.group.traverse(o=>{if(o instanceof Mesh){draws++;triangles+=o.geometry.att
 assert(upward);assert.equal(draws,14,'all finishes survive batching');
 assert(triangles>10000&&triangles<100000,`authored geometry remains complete and bounded: ${triangles} triangles`);
 model.dispose();track.dispose();
-console.log({minVolume,maxVolume,maxError,cryFrames,standingTime,draws,triangles});
+console.log({minVolume,maxVolume,maxError,cryFrames,standingTime,sustainedImpacts,glanceImpacts,glanceYawDelta:glanceBike.yaw-glanceYaw,draws,triangles});
 console.log('Tricycle physics, crash expression, recovery, linkage and geometry checks passed.');

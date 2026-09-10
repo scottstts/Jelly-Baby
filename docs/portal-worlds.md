@@ -1,10 +1,20 @@
 # Portal worlds
 
-The playroom portal sits at `(0, -.255)` behind the swing and trampoline.
-The toy-world portal is at `(.47, .40)`, outside the lower-right part of the
-road. Arrival faces away from the portal, 10 cm in front of it, with a one-second retrigger
-cooldown. Crossing the opening, rather than pressing an interaction button,
-initiates travel. Grabs and occupied facilities cannot initiate travel.
+The playroom portal sits at `(0, -.255)` behind the swing and trampoline. The
+toy-world portal is derived from the enlarged road layout rather than a fixed
+legacy coordinate: it sits outside the road near the +Z side with 18 cm of clear
+tabletop between the portal housing and road edge and substantial separation
+from the parked tricycle. This keeps portal placement correct when the road
+layout changes.
+
+Arrival is 10 cm from the destination membrane on whichever side the current
+orbit camera occupies. Camera translation preserves that side through the
+teleport, so the portal never stands between the camera and the newly arrived
+baby. The baby's soft-body rest pose is also rotated during placement to face
+the current camera, and locomotion yaw is synchronized to the same angle before
+play resumes. The arrival point remains open tabletop space with a one-second
+retrigger cooldown. Crossing the opening, rather than pressing an interaction
+button, initiates travel. Grabs and occupied facilities cannot initiate travel.
 
 `WorldTravel` owns two scene roots and independent facility managers. Only the
 current manager can show prompts, own input or run contacts. The baby, wood,
@@ -20,8 +30,10 @@ with the transition stage. Later passages reuse geometry; disposal releases
 both worlds.
 
 Shadow proxies respect inherited world visibility. Ground and raised shadow
-cameras refit to active-world envelopes on passage, so visiting the larger
-road does not permanently lower playroom shadow resolution.
+cameras refit to active-world envelopes on passage. The toy-world envelope was
+expanded with the twofold road/scenery footprint, while returning to the
+playroom still restores the smaller active-world fit rather than permanently
+lowering its shadow resolution.
 
 The portal uses one opaque, double-sided TSL spiral membrane and three rotating
 enamel jelly arcs. No scene capture, screen-space transmission, particles or
