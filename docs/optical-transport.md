@@ -25,14 +25,14 @@ model build records two mappings:
 - visible vertices to proxy triangle IDs and barycentric weights for copying
   view thickness back to the full surface.
 
-[`SurfaceBVH`](../src/graphics/refractive-light.js) builds a centroid-split
+[`SurfaceBVH`](../src/graphics/optics/refractive-light.js) builds a centroid-split
 triangle hierarchy once and refits its node bounds as positions change. It is
 used for visible picking, proxy thickness rays, and worker-side tracing without
 the cost of a linear scan over every triangle.
 
 ## GPU caustic field
 
-[`RefractiveLightField`](../src/graphics/refractive-light.js) creates four
+[`RefractiveLightField`](../src/graphics/optics/refractive-light.js) creates four
 render targets:
 
 | Target | Size | Role |
@@ -79,8 +79,8 @@ does not rerender the caustic field.
 
 ## Worker-backed shadow and thickness transport
 
-[`OpticalTransport`](../src/graphics/transport.ts) starts
-[`transport.worker.ts`](../src/graphics/transport.worker.ts) as a module worker.
+[`OpticalTransport`](../src/graphics/optics/transport.ts) starts
+[`transport.worker.ts`](../src/graphics/optics/transport.worker.ts) as a module worker.
 The initialization message sends the optical proxy topology, rest normals, cage
 bindings, and the measured light direction. At most one frame request is in
 flight, and requests are limited to 30 per second.
@@ -123,7 +123,7 @@ surface geometry.
 
 ## Directional shadow/contact field
 
-The worker's [`OpticalShadowField`](../src/graphics/refractive-light.js)
+The worker's [`OpticalShadowField`](../src/graphics/optics/refractive-light.js)
 projects every proxy triangle along the measured incoming light direction onto a
 256² receiver. It stores two channels:
 
@@ -138,7 +138,7 @@ the established opaque shadow/contact behavior.
 ## Facility shadows are separate
 
 Opaque swing and trampoline geometry is handled by
-[`FacilityShadows`](../src/graphics/facility-shadows.ts), not by the optical
+[`FacilityShadows`](../src/facilities/shadows.ts), not by the optical
 worker. It renders complete facility geometry into a fixed-world 512² target
 with red directional shadow and green near-floor contact channels. The table
 combines this target with the optical field using a deterministic tent filter.
@@ -146,7 +146,7 @@ See [Facilities](facilities.md) for its invalidation and swept-bounds rules.
 
 ## Current helper status
 
-[`src/graphics/beam-raster.js`](../src/graphics/beam-raster.js) contains a
+[`src/graphics/optics/beam-raster.js`](../src/graphics/optics/beam-raster.js) contains a
 conservative CPU triangle-to-pixel flux integrator with reusable clipping
 scratch buffers. It is retained as a standalone optical utility, but it is not
 imported by the current runtime. The live caustic path is the GPU render-target

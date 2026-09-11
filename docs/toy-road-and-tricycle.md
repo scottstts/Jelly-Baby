@@ -1,5 +1,11 @@
 # Toy road and tricycle
 
+The track-owned implementation lives under
+[`src/worlds/toy-track/`](../src/worlds/toy-track/): `layout.ts` is the shared
+road source of truth, `graphics/` owns the scenery, and
+`facilities/tricycle/` keeps the vehicle facility's lifecycle, physics,
+geometry, camera, collision, and sound modules together.
+
 The asymmetric road now has a twofold centerline footprint relative to the
 original toy-world layout, while its physical width is 30 cm (1.5x the original
 20 cm width). The infield houses and trees scale twofold with that larger

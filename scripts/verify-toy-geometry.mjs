@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { Box3 } from 'three/webgpu';
-import { Tricycle } from '../src/graphics/tricycle.ts';
-import { JellyPortal } from '../src/graphics/jelly-portal.ts';
-import { ToyTrack } from '../src/graphics/toy-track.ts';
-import { fitGrips } from '../src/game/tricycle-fit.ts';
+import { Tricycle } from '../src/worlds/toy-track/facilities/tricycle/graphics.ts';
+import { JellyPortal } from '../src/facilities/portal/graphics.ts';
+import { ToyTrack } from '../src/worlds/toy-track/graphics/track.ts';
+import { fitGrips } from '../src/worlds/toy-track/facilities/tricycle/fit.ts';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { loadModel } from './load-model.mjs';
 import { auditMeshData, auditTriangleSoup } from './geometry-quality-kit/mesh-topology-audit.js';

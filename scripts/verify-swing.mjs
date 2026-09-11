@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { SWING } from '../src/game/swing-physics.ts';
-import { SwingFacility } from '../src/game/swing-facility.ts';
+import { SWING } from '../src/worlds/main/facilities/swing/physics.ts';
+import { SwingFacility } from '../src/worlds/main/facilities/swing/facility.ts';
 import { Scene } from 'three/webgpu';
-import { FaceExpression } from '../src/graphics/face-expression.ts';
-import { Facilities } from '../src/game/facilities.ts';
+import { FaceExpression } from '../src/graphics/character/face-expression.ts';
+import { Facilities } from '../src/facilities/manager.ts';
 
 const body=new SoftBody(loadModel()),facility=new SwingFacility(new Scene(),body,{add(){}}),swing=facility.physics;
 assert(!facility.interact(),'cannot board from spawn outside the approach radius');

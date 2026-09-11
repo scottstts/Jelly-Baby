@@ -3,9 +3,9 @@ import { Scene } from 'three/webgpu';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
 import { loadModel } from './load-model.mjs';
-import { TrampolineFacility } from '../src/game/trampoline-facility.ts';
-import { TRAMPOLINE } from '../src/game/trampoline-physics.ts';
-import { FaceExpression } from '../src/graphics/face-expression.ts';
+import { TrampolineFacility } from '../src/worlds/main/facilities/trampoline/facility.ts';
+import { TRAMPOLINE } from '../src/worlds/main/facilities/trampoline/physics.ts';
+import { FaceExpression } from '../src/graphics/character/face-expression.ts';
 
 const body=new SoftBody(loadModel()),facility=new TrampolineFacility(new Scene(),body,{add(){}}),physics=facility.physics;
 assert(!facility.interact());

@@ -66,10 +66,12 @@ The C source is not a separate physics design. It is the tight-loop execution
 version of the JavaScript solver's model semantics and data layout.
 
 Rebuilding or running `test:orientation` requires a clang with the wasm32 backend
-and `wasm-ld` (for example, WASI SDK). Set `CLANG` to that compiler's path if the
-default compiler lacks WebAssembly support; Apple's system clang may lack it.
-`scripts/compile-kernel.mjs` shares the compiler flags between generation and
-native equivalence verification, invoking the compiler through interactive zsh.
+and `wasm-ld` (for example, WASI SDK or Homebrew `llvm` plus `lld`). Apple's
+system clang may lack WebAssembly support. `scripts/compile-kernel.mjs` shares
+the compiler flags between generation and native equivalence verification,
+invoking the compiler through interactive zsh; it automatically prefers an
+installed Homebrew LLVM/LLD pair at `/opt/homebrew` or `/usr/local`. Set `CLANG`
+explicitly when using another toolchain.
 
 `npm run test:native-collision` checks exact native/JavaScript facility positions,
 velocities, pendulum response, and blanket outputs, then reports a short median
@@ -85,6 +87,16 @@ ungrouped contact calls and reports a small clear-space benchmark.
 
 The scripts in `package.json` are the supported entry points:
 
+`npm test` is the aggregate check implemented by
+[`scripts/test-suite.mjs`](../scripts/test-suite.mjs). It runs lint,
+TypeScript checking, and Node's built-in test runner over every
+`scripts/verify-*.mjs` file, including
+the face regression. Test files run serially because several checks exercise
+the same generated model and native toolchain. A passing run prints one total
+summary; a failing run prints the accumulated diagnostics for every failed
+audit and test file. The focused `test:*` aliases remain available when only
+one regression is needed.
+
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start Vite for local development. |
@@ -94,6 +106,7 @@ The scripts in `package.json` are the supported entry points:
 | `npm run typecheck` | Run TypeScript with `noEmit`. |
 | `npm run build:model` | Regenerate the packed model assets. |
 | `npm run build:kernel` | Rebuild and embed the WebAssembly soft-body kernel. |
+| `npm test` | Run lint, typecheck, and the complete serial verification suite with an aggregate pass/fail report. |
 | `npm run test:physics` | Run the broad physics/rendering/optics regression, followed by bed and blanket coverage. |
 | `npm run test:swing` | Verify swing behavior and shared facility routing. |
 | `npm run test:trampoline` | Verify trampoline support, rebound, and transitions. |
@@ -167,8 +180,8 @@ checks independent simultaneous grips, opposing stretch, final release
 samples, lost capture/blur/visibility/reset/escape/disposal cleanup, three-finger
 retention, mouse single-grip behavior, and native/JS agreement.
 
-[`scripts/verify-faces.mjs`](../scripts/verify-faces.mjs) is a standalone face
-regression (there is no package alias for it yet). Run it directly with:
+[`scripts/verify-faces.mjs`](../scripts/verify-faces.mjs) is included by
+`npm test` alongside the other verification files. Run it directly with:
 
 ```sh
 node --experimental-strip-types scripts/verify-faces.mjs
@@ -230,21 +243,7 @@ that call is outside this documentation-only change.
 After a code or generated-asset change, use:
 
 ```sh
-npm run lint
-npm run typecheck
-npm run test:physics
-npm run test:swing
-npm run test:trampoline
-npm run test:wearables
-npm run test:toy-geometry
-npm run test:portal-collision
-npm run test:world-travel
-npm run test:facility-shadows
-npm run test:facility-sound
-npm run test:multitouch
-npm run test:orientation # requires CLANG pointing to a WASM-capable compiler
-npm run test:deformation
-npm run test:performance
+npm test
 npm run build
 ```
 

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { Group } from 'three/webgpu';
 import { SoftBody } from '../src/physics/soft-body.js';
-import { BabyFace } from '../src/graphics/baby-face.ts';
-import { FaceExpression } from '../src/graphics/face-expression.ts';
-import { SurfaceBVH } from '../src/graphics/refractive-light.js';
+import { BabyFace } from '../src/graphics/character/baby-face.ts';
+import { FaceExpression } from '../src/graphics/character/face-expression.ts';
+import { SurfaceBVH } from '../src/graphics/optics/refractive-light.js';
 import { loadModel } from './load-model.mjs';
 
 const body=new SoftBody(loadModel()),group=new Group(),face=new BabyFace(body,group);

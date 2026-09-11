@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { PerspectiveCamera, Vector3, Mesh } from 'three/webgpu';
-import { Input } from '../src/game/input.ts';
-import { FixedStepper } from '../src/game/fixed-step.ts';
-import { Locomotion } from '../src/game/locomotion.ts';
+import { Input } from '../src/app/input.ts';
+import { FixedStepper } from '../src/app/fixed-step.ts';
+import { Locomotion } from '../src/app/locomotion.ts';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { FacilityCollision } from '../src/physics/facility-collision.ts';
+import { FacilityCollision } from '../src/facilities/collision.ts';
 import { deformSurface } from '../src/physics/deform-surface.js';
 import { loadModel } from './load-model.mjs';
 

@@ -3,11 +3,11 @@ import { Scene, Group, Mesh, MeshBasicNodeMaterial, DoubleSide, Raycaster, Vecto
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
 import { loadModel } from './load-model.mjs';
-import { BedFacility } from '../src/game/bed-facility.ts';
-import { BED } from '../src/game/bed-physics.ts';
-import { BabyFace } from '../src/graphics/baby-face.ts';
-import { FaceExpression } from '../src/graphics/face-expression.ts';
-import { BlanketClearance } from '../src/game/blanket-clearance.ts';
+import { BedFacility } from '../src/worlds/main/facilities/bed/facility.ts';
+import { BED } from '../src/worlds/main/facilities/bed/physics.ts';
+import { BabyFace } from '../src/graphics/character/baby-face.ts';
+import { FaceExpression } from '../src/graphics/character/face-expression.ts';
+import { BlanketClearance } from '../src/worlds/main/facilities/bed/clearance.ts';
 
 const body=new SoftBody(loadModel()),scene=new Scene();let registered=false;
 const facility=new BedFacility(scene,body,{add(group,bounds){registered=true;group.updateMatrixWorld(true);group.traverse(mesh=>{if(!mesh.isMesh)return;assert(mesh.castShadow&&mesh.receiveShadow);mesh.geometry.computeBoundingBox();assert(bounds.containsBox(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld)));});}});

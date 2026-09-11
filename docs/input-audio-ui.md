@@ -40,7 +40,7 @@ night HDR loads. Its controller is disposed with the runtime.
 
 ## Orbit and camera follow
 
-[`Input`](../src/game/input.ts) creates `OrbitControls` on the renderer canvas.
+[`Input`](../src/app/input.ts) creates `OrbitControls` on the renderer canvas.
 Pan is disabled, damping is enabled, and distance/polar limits keep the camera
 near the tabletop. Dragging the background is therefore an orbit gesture;
 scroll or pinch changes distance.
@@ -99,8 +99,8 @@ camera ray.
 
 ## Flavor picker
 
-[`FlavorPicker`](../src/game/flavor-picker.ts) builds its options from
-[`src/graphics/jelly-flavors.ts`](../src/graphics/jelly-flavors.ts). The current
+[`FlavorPicker`](../src/app/flavor-picker.ts) builds its options from
+[`src/graphics/character/jelly-flavors.ts`](../src/graphics/character/jelly-flavors.ts). The current
 choices are lime, strawberry, blueberry, and lemon. Each option supplies a
 surface color and three absorption coefficients. Choosing one updates the body
 material and the optical field together, so surface tint and transmitted light
@@ -112,7 +112,7 @@ is disposed with the runtime.
 
 ## Facial attachment and expression
 
-The face is not a floating sticker. [`FaceSkin`](../src/graphics/face-skin.ts)
+The face is not a floating sticker. [`FaceSkin`](../src/graphics/character/face-skin.ts)
 indexes the rest-space upper-front triangles into 2 mm XY bins. Each eye, brow,
 blush, mouth, and tongue vertex is transformed in that rest-space frame, sampled
 back onto the highest suitable skin triangle, and offset along the current
@@ -122,7 +122,7 @@ deformed normal.
 their curves remain smooth on the rounded, changing skin. Details render after
 the transmissive body and stay just outside it.
 
-[`FaceExpression`](../src/graphics/face-expression.ts) layers small procedural
+[`FaceExpression`](../src/graphics/character/face-expression.ts) layers small procedural
 states over the resting smile:
 
 - blinks arrive on a human-ish timer with occasional double blinks;
@@ -142,7 +142,7 @@ blink.
 
 ## Sound lifecycle
 
-[`JellySound`](../src/game/sound.ts) creates `AudioContext` lazily on the first
+[`JellySound`](../src/app/sound.ts) creates `AudioContext` lazily on the first
 pointer, touch, or key gesture. It primes a silent buffer for mobile output,
 routes all sound through a gain and dynamics compressor, and starts with a
 master gain of `.62`. If a browser exposes only `webkitAudioContext`, that path
@@ -167,7 +167,7 @@ cleanup and disposal. A separate higher-band squeak layer adds two subdued axle
 chirps per sample cycle through the same movement gate and spatial transport.
 
 Facility audio is event-driven by fixed-step motion, not a free-running loop.
-[`FacilityMotionSound`](../src/game/facility-sound.ts) detects swing reversals,
+[`FacilityMotionSound`](../src/facilities/sound.ts) detects swing reversals,
 bottom crossings, trampoline landings, and spring recovery, with per-kind
 cooldowns. Swing creaks use meaningful angular speed and the incoming speed
 peak at a reversal rather than absolute seat angle, so a seat held high remains

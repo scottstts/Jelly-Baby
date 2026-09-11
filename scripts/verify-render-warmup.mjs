@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { warmMainScenePipelines } from '../src/graphics/render-warmup.ts';
+import { warmMainScenePipelines } from '../src/graphics/scene/render-warmup.ts';
 
 function tree() {
   const root={visible:true,frustumCulled:true,children:[]};

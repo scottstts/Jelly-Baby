@@ -3,12 +3,12 @@ import { Scene } from 'three/webgpu';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { Locomotion } from '../src/game/locomotion.ts';
-import { SwingFacility } from '../src/game/swing-facility.ts';
-import { SWING } from '../src/game/swing-physics.ts';
-import { TrampolineFacility } from '../src/game/trampoline-facility.ts';
-import { TRAMPOLINE } from '../src/game/trampoline-physics.ts';
-import { FacilityCollision, FACILITY_COLLISION_MARGIN } from '../src/physics/facility-collision.ts';
+import { Locomotion } from '../src/app/locomotion.ts';
+import { SwingFacility } from '../src/worlds/main/facilities/swing/facility.ts';
+import { SWING } from '../src/worlds/main/facilities/swing/physics.ts';
+import { TrampolineFacility } from '../src/worlds/main/facilities/trampoline/facility.ts';
+import { TRAMPOLINE } from '../src/worlds/main/facilities/trampoline/physics.ts';
+import { FacilityCollision, FACILITY_COLLISION_MARGIN } from '../src/facilities/collision.ts';
 
 function settle(body,rig) {
   for(let i=0;i<480;i++){rig.step(PHYS.step);body.step(PHYS.step);rig.afterStep();}

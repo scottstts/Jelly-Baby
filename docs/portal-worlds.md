@@ -22,7 +22,12 @@ facility availability gates keep travel unavailable while loading, grabbed, in
 the cooldown, or while another facility owns the body. Travel still uses the
 same loading, arrival, and camera-side placement path after the interaction.
 
-`WorldTravel` owns two scene roots and independent facility managers. Only the
+[`WorldTravel`](../src/worlds/travel.ts) owns two scene roots and independent
+facility managers. The home placement lives in
+[`src/worlds/main/layout.ts`](../src/worlds/main/layout.ts), while the track
+placement is derived by
+[`src/worlds/toy-track/portal-layout.ts`](../src/worlds/toy-track/portal-layout.ts).
+Only the
 current manager can show prompts, own input or run contacts. The baby, wood,
 environment, flavor, camera controls and optical transport are shared. Leaving
 resets ordinary facilities in that world, but a currently worn dressing-table

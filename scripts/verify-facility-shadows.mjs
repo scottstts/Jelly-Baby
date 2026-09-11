@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { Box3, BoxGeometry, Group, Mesh, MeshPhysicalNodeMaterial, Vector3, WebGPUCoordinateSystem } from 'three/webgpu';
-import { SurfaceShadows, SURFACE_SHADOW_SIZE, SURFACE_SHADOW_BIAS } from '../src/graphics/surface-shadows.ts';
-import { FacilityShadows } from '../src/graphics/facility-shadows.ts';
-import { Swing } from '../src/graphics/swing.ts';
-import { SWING } from '../src/game/swing-physics.ts';
-import { Trampoline } from '../src/graphics/trampoline.ts';
-import { TRAMPOLINE } from '../src/game/trampoline-physics.ts';
+import { SurfaceShadows, SURFACE_SHADOW_SIZE, SURFACE_SHADOW_BIAS } from '../src/facilities/surface-shadows.ts';
+import { FacilityShadows } from '../src/facilities/shadows.ts';
+import { Swing } from '../src/worlds/main/facilities/swing/graphics.ts';
+import { SWING } from '../src/worlds/main/facilities/swing/physics.ts';
+import { Trampoline } from '../src/worlds/main/facilities/trampoline/graphics.ts';
+import { TRAMPOLINE } from '../src/worlds/main/facilities/trampoline/physics.ts';
 
 const incoming=new Vector3(.494,-.748,-.443).normalize();
 const shadows=new FacilityShadows(incoming,.7),swing=new Swing();

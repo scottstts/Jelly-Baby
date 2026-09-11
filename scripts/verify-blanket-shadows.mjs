@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { Scene, Vector3, Box3 } from 'three/webgpu';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { BedFacility } from '../src/game/bed-facility.ts';
-import { BED } from '../src/game/bed-physics.ts';
-import { FacilityShadows } from '../src/graphics/facility-shadows.ts';
-import { SURFACE_SHADOW_SIZE } from '../src/graphics/surface-shadows.ts';
+import { BedFacility } from '../src/worlds/main/facilities/bed/facility.ts';
+import { BED } from '../src/worlds/main/facilities/bed/physics.ts';
+import { FacilityShadows } from '../src/facilities/shadows.ts';
+import { SURFACE_SHADOW_SIZE } from '../src/facilities/surface-shadows.ts';
 import { loadModel } from './load-model.mjs';
 
 const body=new SoftBody(loadModel()),scene=new Scene();

@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import * as THREE from 'three/webgpu';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-import { measureWindow } from '../src/graphics/environment.ts';
-import { FacilityShadows } from '../src/graphics/facility-shadows.ts';
+import { measureWindow } from '../src/graphics/scene/environment.ts';
+import { FacilityShadows } from '../src/facilities/shadows.ts';
 
 const bytes=readFileSync(new URL('../src/assets/night.exr',import.meta.url));
 const image=new EXRLoader().setDataType(THREE.HalfFloatType).parse(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));

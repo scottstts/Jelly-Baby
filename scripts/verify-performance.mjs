@@ -4,13 +4,13 @@ import { Vector3 } from 'three/webgpu';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { Locomotion } from '../src/game/locomotion.ts';
-import { FixedStepper } from '../src/game/fixed-step.ts';
+import { Locomotion } from '../src/app/locomotion.ts';
+import { FixedStepper } from '../src/app/fixed-step.ts';
 import { deformSurface } from '../src/physics/deform-surface.js';
-import { OpticalShadowField, RefractiveLightField, SurfaceBVH, updateViewThickness } from '../src/graphics/refractive-light.js';
-import { ABSORPTION } from '../src/graphics/baby.ts';
+import { OpticalShadowField, RefractiveLightField, SurfaceBVH, updateViewThickness } from '../src/graphics/optics/refractive-light.js';
+import { ABSORPTION } from '../src/graphics/character/baby.ts';
 
-const inputSource=readFileSync('src/game/input.ts','utf8');
+const inputSource=readFileSync('src/app/input.ts','utf8');
 assert(!inputSource.includes('raycaster.intersectObject(this.mesh'), 'grab start must not scan the 144k visible triangles');
 assert(inputSource.includes('getCoalescedEvents')&&/if\(e(?:\?)?\.type==='pointerup'\)this\.captureDragTarget\(e,state\)/.test(inputSource), 'abrupt pointer endpoints are latched before release');
 assert(!inputSource.includes('recoverGrabTarget'), 'grab commands must never be rewound after a hard step');
@@ -62,8 +62,8 @@ for(let i=0,j=0;i<target.length;i++,j+=3) {
 }
 const rms=Math.sqrt(error/count);assert(rms<.003,'interpolated thickness stays close to full-mesh tracing');
 
-const runtimeSource=readFileSync('src/game/runtime.ts','utf8');
-const transportSource=readFileSync('src/graphics/transport.ts','utf8');
+const runtimeSource=readFileSync('src/app/runtime.ts','utf8');
+const transportSource=readFileSync('src/graphics/optics/transport.ts','utf8');
 assert(runtimeSource.includes('optics.update(renderer,body);'),'GPU caustics update from the render loop, not the 30 Hz worker');
 assert(!transportSource.includes('lightBytes')&&!transportSource.includes('photons'),'worker transport no longer publishes CPU caustic photons');
 const gpuField=new RefractiveLightField(proxy,direction,ABSORPTION);
@@ -74,7 +74,7 @@ gpuField.dispose();
 // with transfers catches detached-buffer mistakes in the two-stage response.
 const messages=[],previousSelf=globalThis.self;
 globalThis.self={postMessage:(data,options)=>messages.push(globalThis.structuredClone(data,options))};
-await import('../src/graphics/transport.worker.ts');
+await import('../src/graphics/optics/transport.worker.ts');
 globalThis.self.onmessage({data:globalThis.structuredClone({type:'init',positions:proxy.positions,indices:proxy.indices,
   restNormals:proxy.restNormals,bindingIds:proxy.bindingIds,bindingWeights:proxy.bindingWeights,direction:direction.toArray(),sigma:ABSORPTION})});
 globalThis.self.onmessage({data:{type:'frame',particles:body.x.slice(),nodalF:body.nodalF.slice(),center:body.center.toArray(),camera:camera.position.toArray()}});

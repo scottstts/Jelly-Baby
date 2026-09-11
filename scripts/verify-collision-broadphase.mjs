@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
-import { FacilityCollision } from '../src/physics/facility-collision.ts';
+import { FacilityCollision } from '../src/facilities/collision.ts';
 import { ExhaustiveFacilityCollision } from './facility-collision-reference.mjs';
-import { Swing } from '../src/graphics/swing.ts';
-import { Bed } from '../src/graphics/bed.ts';
-import { WearableTable } from '../src/graphics/wearable-table.ts';
-import { BedBlanket } from '../src/game/bed-blanket.ts';
-import { TRAMPOLINE } from '../src/game/trampoline-physics.ts';
+import { Swing } from '../src/worlds/main/facilities/swing/graphics.ts';
+import { Bed } from '../src/worlds/main/facilities/bed/graphics.ts';
+import { WearableTable } from '../src/worlds/main/facilities/wearable/graphics.ts';
+import { BedBlanket } from '../src/worlds/main/facilities/bed/blanket.ts';
+import { TRAMPOLINE } from '../src/worlds/main/facilities/trampoline/physics.ts';
 import { PHYS } from '../src/physics/constants.js';
 
 const body=new SoftBody(loadModel()),referenceBody=new SoftBody(loadModel());

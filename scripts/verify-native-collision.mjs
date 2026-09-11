@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { loadModel } from "./load-model.mjs";
 import { SoftBody } from "../src/physics/soft-body.js";
-import { FacilityCollision } from "../src/physics/facility-collision.ts";
-import { stopFacilityThrow } from "../src/physics/facility-throw.ts";
-import { Swing } from "../src/graphics/swing.ts";
-import { SwingPhysics } from "../src/game/swing-physics.ts";
-import { BlanketContact } from "../src/game/blanket-contact.ts";
-import { BlanketClearance } from "../src/game/blanket-clearance.ts";
-import { BedPhysics, BED } from "../src/game/bed-physics.ts";
-import { BedBlanket } from "../src/game/bed-blanket.ts";
+import { FacilityCollision } from "../src/facilities/collision.ts";
+import { stopFacilityThrow } from "../src/facilities/throw.ts";
+import { Swing } from "../src/worlds/main/facilities/swing/graphics.ts";
+import { SwingPhysics } from "../src/worlds/main/facilities/swing/physics.ts";
+import { BlanketContact } from "../src/worlds/main/facilities/bed/contact.ts";
+import { BlanketClearance } from "../src/worlds/main/facilities/bed/clearance.ts";
+import { BedPhysics, BED } from "../src/worlds/main/facilities/bed/physics.ts";
+import { BedBlanket } from "../src/worlds/main/facilities/bed/blanket.ts";
 import { PHYS } from "../src/physics/constants.js";
 
 const body=new SoftBody(loadModel()),reference=new SoftBody(loadModel());

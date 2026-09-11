@@ -1,9 +1,9 @@
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { Locomotion } from '../src/game/locomotion.ts';
-import { Baby, ABSORPTION } from '../src/graphics/baby.ts';
-import { RefractiveLightField } from '../src/graphics/refractive-light.js';
+import { Locomotion } from '../src/app/locomotion.ts';
+import { Baby, ABSORPTION } from '../src/graphics/character/baby.ts';
+import { RefractiveLightField } from '../src/graphics/optics/refractive-light.js';
 import { Vector3, Raycaster } from 'three/webgpu';
 import { deformSurface } from '../src/physics/deform-surface.js';
 

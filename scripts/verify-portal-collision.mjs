@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
-import { FacilityCollision } from '../src/physics/facility-collision.ts';
-import { portalCollisionBoxes } from '../src/graphics/jelly-portal.ts';
+import { FacilityCollision } from '../src/facilities/collision.ts';
+import { portalCollisionBoxes } from '../src/facilities/portal/graphics.ts';
 
 function moveBody(body,x,y,z) {
   const dx=x-body.center.x,dy=y-body.center.y,dz=z-body.center.z;

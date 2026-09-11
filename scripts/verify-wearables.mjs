@@ -3,11 +3,11 @@ import { Box3, Group, Quaternion, Scene, Vector3 } from 'three/webgpu';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { Locomotion } from '../src/game/locomotion.ts';
-import { HEAD_WEARABLES, WEARABLE_TABLE } from '../src/game/wearable-physics.ts';
-import { CarriedWearableFacility, WearableFacility } from '../src/game/wearable-facility.ts';
-import { BedFacility } from '../src/game/bed-facility.ts';
-import { BED } from '../src/game/bed-physics.ts';
+import { Locomotion } from '../src/app/locomotion.ts';
+import { HEAD_WEARABLES, WEARABLE_TABLE } from '../src/worlds/main/facilities/wearable/physics.ts';
+import { CarriedWearableFacility, WearableFacility } from '../src/worlds/main/facilities/wearable/facility.ts';
+import { BedFacility } from '../src/worlds/main/facilities/bed/facility.ts';
+import { BED } from '../src/worlds/main/facilities/bed/physics.ts';
 
 function moveBody(body,x,z) {
   const dx=x-body.center.x,dz=z-body.center.z;

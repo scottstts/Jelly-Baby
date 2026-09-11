@@ -15,13 +15,21 @@ loading overlay, and warms the destination before resuming. See
 | Area | Primary modules | Responsibility |
 | --- | --- | --- |
 | Browser shell | `src/main.ts`, `src/style.css`, `index.html` | Create the loading/error UI, expose controls, load the runtime, and style the page. |
-| Runtime orchestration | `src/game/runtime.ts` | Construct subsystems, connect callbacks, perform warmup, run the frame order, and dispose resources. |
-| Physics | `src/physics/*`, `src/game/fixed-step.ts`, `src/game/locomotion.ts` | Advance the soft body, contact, grabbing, posture, jumping, and fixed-rate time. |
-| Character rendering | `src/graphics/baby.ts`, `baby-face.ts`, `face-skin.ts`, `face-expression.ts` | Render the body, attach the face to the deformed skin, and animate expression. |
-| Scene rendering | `renderer.ts`, `environment.ts`, `studio-light.ts`, `table.ts`, `composite.ts` | Configure WebGPU, load and edit the HDR lighting, draw the table, and apply the final image pipeline. |
-| Light transport | `refractive-light.js`, `transport.ts`, `transport.worker.ts` | Produce the GPU caustic field and asynchronous thickness/shadow fields. |
-| Facilities | `facilities.ts`, `swing-*`, `trampoline-*`, `bed-*`, `wearable-*`, `facility-shadows.ts` | Select and simulate interactive set pieces while sharing controls and shadow infrastructure. |
-| Input and sound | `input.ts`, `sound.ts`, `facility-sound.ts`, `flavor-picker.ts` | Translate pointer, keyboard, and touch input into simulation commands and generate procedural audio. |
+| Runtime orchestration | `src/app/runtime.ts` | Construct subsystems, connect callbacks, perform warmup, run the frame order, and dispose resources. |
+| Physics | `src/physics/*`, `src/app/fixed-step.ts`, `src/app/locomotion.ts` | Advance the soft body, contact, grabbing, posture, jumping, and fixed-rate time. |
+| Character rendering | `src/graphics/character/*` | Render the body, attach the face to the deformed skin, animate expression, and define jelly flavors. |
+| Scene rendering | `src/graphics/scene/*` | Configure WebGPU, load and edit the HDR lighting, draw the table, and apply the final image pipeline. |
+| Light transport | `src/graphics/optics/*` | Produce the GPU caustic field and asynchronous thickness/shadow fields. |
+| Shared facility plumbing | `src/facilities/*` | Provide the facility contract, selection, collision, shadows, sound, and portal implementation. |
+| World-owned features | `src/worlds/main/*`, `src/worlds/toy-track/*` | Keep each world's layouts, scenery, and facility implementations together. |
+| Input and sound | `src/app/input.ts`, `src/app/sound.ts`, `src/app/flavor-picker.ts` | Translate pointer, keyboard, and touch input into simulation commands and connect presentation audio. |
+
+The source tree is organized by ownership rather than by one flat list of
+subsystems: application wiring lives in `app`, reusable facility infrastructure
+lives in `facilities`, shared body simulation remains in `physics`, and each
+world owns its layouts, scenery, and world-specific facilities under `worlds`.
+The detailed directory map and extension guidance live in
+[Source structure](source-structure.md).
 
 The runtime is intentionally not a second home for subsystem logic. It wires
 objects together and owns their lifetime; behavior belongs beside the data it
@@ -140,7 +148,8 @@ Several decisions are architectural rather than local implementation details:
   render hitch. Catch-up is capped instead of becoming an unbounded spiral.
 - Facilities own the body only while active. Inactive set pieces can continue
   their own small simulations, such as an empty swing coasting.
-- Geometry, physics, and orchestration remain separate. A new facility should
-  follow the existing `*Physics` / `graphics/*` / `*Facility` split.
+- Geometry, physics, and orchestration remain separate. A world-owned facility
+  should keep its `facility.ts`, `physics.ts`, and `graphics.ts` modules
+  together, while shared facility concerns stay in `src/facilities`.
 - GPU device loss, renderer errors, worker errors, and invalid simulation state
   all use the same fatal UI path.

@@ -1,5 +1,5 @@
 // Frozen exhaustive traversal: verifies optimization without broad-phase rejection.
-import { FacilityCollision, FACILITY_COLLISION_MARGIN } from "../src/physics/facility-collision.ts";
+import { FacilityCollision, FACILITY_COLLISION_MARGIN } from "../src/facilities/collision.ts";
 const COLLISION_ITERATIONS=2;
 export class ExhaustiveFacilityCollision extends FacilityCollision {
   resolveBoxes(boxes,margin=FACILITY_COLLISION_MARGIN) {

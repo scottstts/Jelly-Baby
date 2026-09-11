@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { SurfaceBVH } from '../src/graphics/refractive-light.js';
+import { SurfaceBVH } from '../src/graphics/optics/refractive-light.js';
 import { inverse3 } from '../src/physics/soft-body.js';
 
 /** A lower sampling of the same implicit surface, used only for light transport. */

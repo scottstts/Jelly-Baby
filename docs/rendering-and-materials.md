@@ -6,7 +6,7 @@ nodes, and treats a missing or unstable WebGPU device as a visible fatal error.
 
 ## Renderer creation and failure policy
 
-[`src/graphics/renderer.ts`](../src/graphics/renderer.ts) requires a secure
+[`src/graphics/scene/renderer.ts`](../src/graphics/scene/renderer.ts) requires a secure
 context (`HTTPS` or `localhost`) and `navigator.gpu` before constructing
 `THREE.WebGPURenderer`. It requests antialiasing and the high-performance power
 preference, then explicitly disables Three r185's fallback factory. No WebGL
@@ -25,7 +25,7 @@ facility interaction, orbiting, and dragging.
 
 ## Loading-time pipeline warmup
 
-[`render-warmup.ts`](../src/graphics/render-warmup.ts) wraps the main-scene
+[`render-warmup.ts`](../src/graphics/scene/render-warmup.ts) wraps the main-scene
 `compileAsync` call. During that call only, it exposes hidden objects and disables
 frustum culling for every traversed object, then restores the exact original
 flags in `finally`. This ensures rear-room facilities and later-visible effects
@@ -35,7 +35,7 @@ normal render culling, visibility, materials, or collision behavior.
 
 ## Drawing-buffer and camera sizing
 
-[`resizeView`](../src/graphics/renderer.ts) is called after startup and through a
+[`resizeView`](../src/graphics/scene/renderer.ts) is called after startup and through a
 resize-observer callback coalesced to one animation frame. It computes:
 
 ```text
@@ -61,7 +61,7 @@ loaded from [`src/assets/bg_room.exr`](../src/assets/bg_room.exr) as half-float
 linear data. It is not drawn as the scene background; it is converted into a
 PMREM environment texture for image-based lighting.
 
-[`src/graphics/studio-light.ts`](../src/graphics/studio-light.ts) reorients the
+[`src/graphics/scene/studio-light.ts`](../src/graphics/scene/studio-light.ts) reorients the
 photographed window to the project's elevated key direction, applies a broad
 gain to the key and a reduced fill to the rest of the room, and writes a new
 half-float HDR image. `measureWindow` then integrates that edited image to
@@ -108,7 +108,7 @@ existing fatal UI, and disposal prevents late loads from changing the scene.
 
 ## Table material
 
-[`src/graphics/table.ts`](../src/graphics/table.ts) loads three wood maps:
+[`src/graphics/scene/table.ts`](../src/graphics/scene/table.ts) loads three wood maps:
 
 - `wood_base.jpg` for albedo;
 - `wood_normal.png` for micro-relief; and
@@ -132,7 +132,7 @@ use transparent ground overlays or nearly coplanar shadow geometry.
 
 ## Baby material and render order
 
-[`src/graphics/baby.ts`](../src/graphics/baby.ts) uses a
+[`src/graphics/character/baby.ts`](../src/graphics/character/baby.ts) uses a
 `MeshPhysicalNodeMaterial` with full transmission, IOR `1.35`, small dispersion,
 clearcoat, and attenuation. Its `thicknessNode` reads the dynamic
 `opticalThickness` vertex attribute, which is filled asynchronously by the
@@ -149,7 +149,7 @@ and then appear a second time through the body.
 
 ## Final image pipeline
 
-[`src/graphics/composite.ts`](../src/graphics/composite.ts) builds a TSL
+[`src/graphics/scene/composite.ts`](../src/graphics/scene/composite.ts) builds a TSL
 `RenderPipeline` around the scene pass. In linear HDR order it:
 
 1. reads the scene output;

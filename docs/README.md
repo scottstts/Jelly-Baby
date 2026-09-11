@@ -31,12 +31,14 @@ portal-linked play worlds, and a deliberately measured optical treatment.
   responsive presentation.
 - [Assets and verification](assets-and-verification.md) — generated model
   data, build scripts, test coverage, benchmarks, and operational commands.
+- [Source structure](source-structure.md) — the application, shared facility,
+  rendering, physics, and world-owned feature boundaries.
 
 ## Reading the code
 
 The entry point is [`src/main.ts`](../src/main.ts). It creates the DOM shell and
 observes every startup failure. The game implementation is assembled by
-[`src/game/runtime.ts`](../src/game/runtime.ts), but the runtime remains an
+[`src/app/runtime.ts`](../src/app/runtime.ts), but the runtime remains an
 orchestrator: physics, rendering, input, audio, transport, and facilities live
 in their own modules.
 

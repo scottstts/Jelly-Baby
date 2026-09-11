@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { FacilityAudio, FacilityMotionSound, makeFacilitySample } from '../src/game/facility-sound.ts';
-import { makeTricycleRollSample, makeTricycleSqueakSample, TricycleRollAudio } from '../src/game/tricycle-sound.ts';
+import { FacilityAudio, FacilityMotionSound, makeFacilitySample } from '../src/facilities/sound.ts';
+import { makeTricycleRollSample, makeTricycleSqueakSample, TricycleRollAudio } from '../src/worlds/toy-track/facilities/tricycle/sound.ts';
 
 const events=[],motion=new FacilityMotionSound(event=>events.push(event),{x:0,y:0,z:0});
 for(let i=0;i<240;i++)motion.swing(1/240,0,0,false);

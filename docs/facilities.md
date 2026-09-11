@@ -7,7 +7,7 @@ events.
 
 ## Shared facility contract
 
-[`src/game/facilities.ts`](../src/game/facilities.ts) defines the `Facility`
+[`src/facilities/manager.ts`](../src/facilities/manager.ts) defines the `Facility`
 interface. Each implementation supplies:
 
 - a unique `id` and short display `label`;
@@ -48,7 +48,7 @@ membrane aperture remains open for the existing travel destination.
 
 ### Geometry
 
-[`src/graphics/swing.ts`](../src/graphics/swing.ts) builds a miniature joiner's
+[`src/worlds/main/facilities/swing/graphics.ts`](../src/worlds/main/facilities/swing/graphics.ts) builds a miniature joiner's
 swing from rounded timber, sage seat pieces, brass pegs/rings, and paired rope
 bridles. The seat is a three-slat assembly under a pivot group. The visual pivot
 rotates around the X axis; the fixed frame stays in world space. The frame
@@ -62,7 +62,7 @@ materials when the facility is removed.
 
 ### Pendulum and rider coupling
 
-[`src/game/swing-physics.ts`](../src/game/swing-physics.ts) defines the swing in
+[`src/worlds/main/facilities/swing/physics.ts`](../src/worlds/main/facilities/swing/physics.ts) defines the swing in
 metres:
 
 | Quantity | Value |
@@ -104,10 +104,10 @@ clear it.
 
 ## Head-wearable table
 
-[`src/game/wearable-facility.ts`](../src/game/wearable-facility.ts) and
-[`src/game/wearable-physics.ts`](../src/game/wearable-physics.ts) own the
+[`src/worlds/main/facilities/wearable/facility.ts`](../src/worlds/main/facilities/wearable/facility.ts) and
+[`src/worlds/main/facilities/wearable/physics.ts`](../src/worlds/main/facilities/wearable/physics.ts) own the
 dressing table's interaction state, while
-[`src/graphics/wearable-table.ts`](../src/graphics/wearable-table.ts) owns the
+[`src/worlds/main/facilities/wearable/graphics.ts`](../src/worlds/main/facilities/wearable/graphics.ts) owns the
 table and the three reference-derived assets. The table is placed at
 `(-.155, .305)` in the same lower-left authored quadrant as the supplied
 layout drawing. Its tabletop, legs, and apron use the swing frame's shared
@@ -131,7 +131,7 @@ initial velocity target a small `.0065 m` detachment above the live head basis, 
 
 ### Geometry
 
-[`src/graphics/trampoline.ts`](../src/graphics/trampoline.ts) builds a padded
+[`src/worlds/main/facilities/trampoline/graphics.ts`](../src/worlds/main/facilities/trampoline/graphics.ts) builds a padded
 annular trampoline with a stitched cushion, thread rings, a dynamic fabric bed,
 32 visible coil springs, three U-shaped tubular legs, collars, bolts, and six
 molded rubber feet. The bed is a radial grid whose vertices carry a smooth
@@ -140,7 +140,7 @@ the bed compression changes; the frame remains static.
 
 ### Support, bounce, and flight
 
-[`src/game/trampoline-physics.ts`](../src/game/trampoline-physics.ts) defines:
+[`src/worlds/main/facilities/trampoline/physics.ts`](../src/worlds/main/facilities/trampoline/physics.ts) defines:
 
 | Quantity | Value |
 | --- | ---: |
@@ -200,7 +200,7 @@ the volume is doing its job.
 
 ## Facility shadow projection
 
-[`src/graphics/facility-shadows.ts`](../src/graphics/facility-shadows.ts) gives
+[`src/facilities/shadows.ts`](../src/facilities/shadows.ts) gives
 opaque facilities fixed-world shadows without adding transparent geometry to the
 table. Each facility registers a world-space `Box3` that covers its entire
 motion envelope. The constructor projects the bounds along the measured
@@ -223,7 +223,7 @@ world-to-UV transform accounts for the WebGPU row direction explicitly; there
 is no camera-following shadow shimmer.
 
 `FacilityShadows.add` also registers every descendant mesh with
-[`SurfaceShadows`](../src/graphics/surface-shadows.ts). Two 2048² single-channel depth maps
+[`SurfaceShadows`](../src/facilities/surface-shadows.ts). Two 2048² single-channel depth maps
 provide jelly-to-facility, facility self-shadowing, and facility-to-jelly
 occlusion. They share the measured window direction and fixed facility motion
 bounds with a 12 mm lateral margin and a 25 cm margin along the light depth
@@ -324,12 +324,15 @@ construction and reuse the same forces and targets each step.
 
 To add another set piece:
 
-1. implement `Facility` in `src/game/facilities.ts`'s surrounding module;
-2. keep simulation in `src/game/<name>-physics.ts` and geometry in
-   `src/graphics/<name>.ts`;
+1. add a feature folder under the owning world, such as
+   `src/worlds/main/facilities/<name>/`;
+2. keep the implementation's `facility.ts`, `physics.ts`, and `graphics.ts`
+   modules together; put reusable selection, collision, shadow, and sound
+   plumbing in `src/facilities/`;
 3. give it a unique `id`, concise `label`, interaction distance, reset, and
    disposal behavior;
-4. register it with `facilities.add(...)` in `src/game/runtime.ts`;
+4. register it with `facilities.add(...)` in `src/app/runtime.ts` or the
+   owning world's setup;
 5. register its complete motion envelope with `FacilityShadows.add(...)`;
 6. route semantic sound events through `FacilityMotionSound` if it has motion;
    and

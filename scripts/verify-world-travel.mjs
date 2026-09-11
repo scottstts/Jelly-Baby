@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { Scene, PerspectiveCamera } from 'three/webgpu';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
-import { Facilities } from '../src/game/facilities.ts';
-import { WorldTravel } from '../src/game/world-travel.ts';
-import { HOME_PORTAL } from '../src/graphics/jelly-portal.ts';
-import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL, cameraFacingYaw, portalArrivalZ } from '../src/game/toy-world-layout.ts';
+import { Facilities } from '../src/facilities/manager.ts';
+import { WorldTravel } from '../src/worlds/travel.ts';
+import { HOME_PORTAL } from '../src/worlds/main/layout.ts';
+import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL, cameraFacingYaw, portalArrivalZ } from '../src/worlds/toy-track/portal-layout.ts';
 
 assert.equal(portalArrivalZ(.6,.5,.8),.6+PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the positive portal side');
 assert.equal(portalArrivalZ(.6,.7,.4),.6-PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the negative portal side');

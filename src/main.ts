@@ -1,5 +1,5 @@
 import './style.css';
-import { flavorPickerMarkup } from './game/flavor-picker.ts';
+import { flavorPickerMarkup } from './app/flavor-picker.ts';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML=`
   <main id="viewport" aria-label="Jelly baby playground"></main>
@@ -50,7 +50,7 @@ window.addEventListener('unhandledrejection',event=>fail(event.reason));
 document.querySelector('#retry')!.addEventListener('click',()=>location.reload());
 
 // One observed chain covers imports, initialization, compilation, warmup and first render.
-void import('./game/runtime.ts').then(({startGame})=>startGame(message=>{
+void import('./app/runtime.ts').then(({startGame})=>startGame(message=>{
   if(failed)throw new Error('Startup aborted after a GPU failure');
   stage=message;document.querySelector('#load-message')!.textContent=message;
 },fail)).then(started=>{

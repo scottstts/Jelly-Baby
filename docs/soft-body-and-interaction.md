@@ -251,7 +251,7 @@ pointer ray.
 
 ## Locomotion and jumping
 
-[`src/game/locomotion.ts`](../src/game/locomotion.ts) is a force-controlled rig,
+[`src/app/locomotion.ts`](../src/app/locomotion.ts) is a force-controlled rig,
 not an animation replacement. It computes a mass-weighted center and velocity,
 turns toward the requested camera-relative direction, and applies per-node
 posture/gait forces toward a yawed rest shape. Feet receive stronger support;
@@ -269,7 +269,7 @@ the soft-body solver remains responsible for deformation, contact, and recoil.
 
 ## Fixed-rate timing
 
-[`src/game/fixed-step.ts`](../src/game/fixed-step.ts) accumulates clamped frame
+[`src/app/fixed-step.ts`](../src/app/fixed-step.ts) accumulates clamped frame
 time and executes up to 12 steps. Four steps cover a normal 60 Hz frame and 12
 steps cover the full accepted 50 ms hitch. Excess beyond the caller's contract
 is reduced to a remainder instead of creating a slow-motion catch-up spiral.

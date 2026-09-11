@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { PerspectiveCamera, Vector3, Mesh } from 'three/webgpu';
-import { Input } from '../src/game/input.ts';
+import { Input } from '../src/app/input.ts';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
-import { Locomotion } from '../src/game/locomotion.ts';
+import { Locomotion } from '../src/app/locomotion.ts';
 import { loadModel } from './load-model.mjs';
 
 // Exercise the actual input handlers without starting a renderer or dev server.
