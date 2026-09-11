@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { float, positionWorld, texture, uniform, vec3 } from 'three/tsl';
+import { float, normalWorldGeometry, positionWorld, texture, uniform, vec3 } from 'three/tsl';
 import type Node from 'three/src/nodes/core/Node.js';
 import type { RefractiveLightField } from './refractive-light.js';
 
@@ -40,10 +40,26 @@ export class CausticReceivers {
     const materialColor=(lit.colorNode??uniform(lit.color)) as Node<'vec3'>;
     const albedo=options.albedo??materialColor;
     const visibility=options.visibility??float(1);
-    const uv=positionWorld.xz.sub(this.optics.originNode).div(this.optics.spanNode);
+    // The texture stores irradiance where refracted rays reach y=0. Sampling it
+    // with raw world XZ extrudes every bright floor texel vertically, which made
+    // tall props glow all the way up their sides. Reconstruct the corresponding
+    // floor point for this fragment along the measured light direction instead.
+    // This keeps the existing caustic field unchanged while making raised
+    // reception spatially consistent with the direction that produced it.
+    const lightDirection=this.optics.lightDirectionNode as unknown as Node<'vec3'>;
+    const floorDistance=positionWorld.y.max(0).negate().div(lightDirection.y.min(-1e-4));
+    const projectedXZ=positionWorld.xz.add(lightDirection.xz.mul(floorDistance));
+    const uv=projectedXZ.sub(this.optics.originNode).div(this.optics.spanNode);
     const inside=float(uv.x.greaterThan(0).and(uv.x.lessThan(1)).and(uv.y.greaterThan(0)).and(uv.y.lessThan(1)));
     const sample=texture(this.optics.lightTexture,uv);
-    const strength=this.irradianceNode.mul(inside).mul(visibility);
+    // lightTexture is calibrated as irradiance on a horizontal receiver. Convert
+    // that response to the actual geometric surface orientation, but never let
+    // an approximate raised receiver become brighter than the established floor
+    // result. Horizontal upward-facing surfaces therefore remain exactly 1.0.
+    const horizontalFacing=lightDirection.y.abs().max(1e-4);
+    const surfaceFacing=normalWorldGeometry.dot(lightDirection.negate()).max(0);
+    const incidence=surfaceFacing.div(horizontalFacing).clamp(0,1);
+    const strength=this.irradianceNode.mul(inside).mul(visibility).mul(incidence);
     // Keep RGB products component-wise. @types/three's fluent mul overloads
     // are scalar-biased for vec3 nodes even though TSL supports vec3*vec3.
     const caustic=vec3(

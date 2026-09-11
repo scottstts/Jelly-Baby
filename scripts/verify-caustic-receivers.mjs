@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three/webgpu';
 import { color, uniform } from 'three/tsl';
 import { CausticReceivers } from '../src/graphics/optics/caustic-receivers.ts';
@@ -8,8 +9,15 @@ const optics={
   lightTexture,
   originNode:uniform(new THREE.Vector2(-.1,-.1)),
   spanNode:uniform(new THREE.Vector2(.2,.2)),
+  lightDirectionNode:uniform(new THREE.Vector3(.494,-.748,-.443).normalize()),
 };
 const light={color:new THREE.Color(.8,.7,.6),irradiance:4};
+
+const receiverSource=readFileSync('src/graphics/optics/caustic-receivers.ts','utf8');
+assert(receiverSource.includes('positionWorld.y.max(0)')&&receiverSource.includes('lightDirection.xz.mul(floorDistance)'),
+  'raised receivers back-project fragments to the floor field instead of vertically extruding floor texels');
+assert(receiverSource.includes('normalWorldGeometry.dot(lightDirection.negate())')&&receiverSource.includes('.clamp(0,1)'),
+  'receiver energy is gated by geometric light-facing incidence and cannot exceed the calibrated floor response');
 const receivers=new CausticReceivers(optics,light);
 
 const material=new THREE.MeshPhysicalNodeMaterial({color:0x6f8f60});

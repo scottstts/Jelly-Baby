@@ -79,7 +79,14 @@ simulation or rerun refraction per object. A plausible scene receiver sets
 `receiveCaustics = true` and is registered once with the receiver layer. The
 layer injects the existing caustic texture into PBR node-material emissive
 response, multiplied by the receiver albedo and the same measured irradiance and
-source color used by the tabletop. Existing emissive nodes are added to rather
+source color used by the tabletop. For raised geometry, each fragment is first
+projected from its world position down to the y=0 caustic plane along the measured
+light direction before sampling. This is essential: sampling raw world XZ would
+vertically extrude every bright floor texel through tall props. The sampled energy
+is also multiplied by geometric light-facing incidence relative to the horizontal
+receiver calibration, clamped so a raised surface cannot become brighter than the
+established floor response. Upward horizontal surfaces retain exactly the same
+caustic intensity as the tabletop. Existing emissive nodes are added to rather
 than replaced. `FacilityShadows.add(...)` opts all descendant facility meshes in
 automatically, so current and future ordinary set pieces receive caustics by
 default. The tabletop uses the same receiver layer with its existing
