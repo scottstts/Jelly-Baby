@@ -40,6 +40,7 @@ export class WorldTravel {
     this.homePortalFacility=new PortalFacility(body,'home-portal-housing',HOME_PORTAL.x,HOME_PORTAL.z,this.homePortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
     this.homeFacilities.add(this.homePortalFacility);
     this.home.add(this.homePortal.group);this.toys.visible=false;scene.add(this.home,this.toys);
+    this.shadows.add(this.homePortal.group,this.homePortal.lightingEnvelope);
   }
   get facilities(){return this.inToys?this.toyFacilities:this.homeFacilities;}
   /** The active world's portal is a normal facility candidate for E/touch. */
@@ -89,6 +90,7 @@ export class WorldTravel {
       if(this.disposed)return;
       this.tricycle=new TricycleFacility(this.toys,this.body,this.shadows);this.toyFacilities.add(this.tricycle);
       this.returnPortal=new JellyPortal(TRACK_PORTAL.x,TRACK_PORTAL.z);this.toys.add(this.returnPortal.group);
+      this.shadows.add(this.returnPortal.group,this.returnPortal.lightingEnvelope);
       this.returnPortalFacility=new PortalFacility(this.body,'toy-portal-housing',TRACK_PORTAL.x,TRACK_PORTAL.z,this.returnPortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
       this.toyFacilities.add(this.returnPortalFacility);
       this.toyFacilities.warmupCollisions();

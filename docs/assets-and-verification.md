@@ -114,9 +114,10 @@ one regression is needed.
 | `npm run test:wearables` | Verify wearable geometry, swap/take-off routing, portal carry/take-off return, head-frame fit, bed return, shadow sync, and table collision. |
 | `npm run test:blanket-shadows` | Reproduce curved-blanket shadow acne and verify receiver depths, real blockers, and caching. |
 | `npm run test:facility-collision` | Verify tight facility volumes, surface clearance, and pre-contact hints. |
-| `npm run test:portal-collision` | Verify the portal aperture stays passable while housing, rails, controls, pods, and mirrored bases collide. |
+| `npm run test:portal-collision` | Verify the portal aperture stays passable while solid hardware collides, and verify the portal participates in universal shadows and caustic reception. |
 | `npm run test:collision-broadphase` | Compare optimized and exhaustive contacts exactly, verify safe rejection/contact chains, and measure collision CPU cost. |
 | `npm run test:facility-shadows` | Verify facility projection and invalidation. |
+| `npm run test:caustics` | Verify the universal `receiveCaustics` opt-in, material deduplication, emissive preservation, and lighting updates. |
 | `npm run test:facility-sound` | Verify motion-event timing and procedural audio. |
 | `npm run test:multitouch` | Verify simultaneous grips and cleanup paths. |
 | `npm run test:orientation` | Compile and compare indexed repair with full-scan native repair; requires a WASM-capable clang. |

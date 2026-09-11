@@ -223,7 +223,8 @@ world-to-UV transform accounts for the WebGPU row direction explicitly; there
 is no camera-following shadow shimmer.
 
 `FacilityShadows.add` also registers every descendant mesh with
-[`SurfaceShadows`](../src/facilities/surface-shadows.ts). Two 2048² single-channel depth maps
+[`SurfaceShadows`](../src/facilities/surface-shadows.ts) and marks it
+`receiveCaustics = true` for the shared caustic receiver layer. Two 2048² single-channel depth maps
 provide jelly-to-facility, facility self-shadowing, and facility-to-jelly
 occlusion. They share the measured window direction and fixed facility motion
 bounds with a 12 mm lateral margin and a 25 cm margin along the light depth
@@ -240,7 +241,7 @@ light UVs. Softness therefore stays consistent with the ground as depth-map
 resolution changes. Each of the nine lookups interpolates four depth comparisons
 so subtexel motion stays smooth. Depth itself is never linearly filtered across
 unrelated surfaces.
-This path leaves the existing table masks and caustics unchanged.
+This raised-shadow path leaves the caustic generator itself unchanged; caustic reception is injected separately through `CausticReceivers`.
 
 Curved receivers may opt into an additional per-mesh receiver-depth map via
 `curvedShadowReceiver`. The blanket uses this to sample its actual surface at
@@ -333,11 +334,19 @@ To add another set piece:
    disposal behavior;
 4. register it with `facilities.add(...)` in `src/app/runtime.ts` or the
    owning world's setup;
-5. register its complete motion envelope with `FacilityShadows.add(...)`;
+5. register its complete motion envelope with `FacilityShadows.add(...)`; this
+   supplies ground/raised shadow casting and reception and, by default, caustic
+   reception for all descendant PBR meshes;
 6. route semantic sound events through `FacilityMotionSound` if it has motion;
    and
 7. add a focused verification script for boarding, ownership, reset, body
    coupling, bounds, and any user-facing expression/audio threshold.
+
+For scene geometry that is not a facility, follow the same optical rule
+explicitly: any material surface that could plausibly receive jelly-caustic light
+should set `receiveCaustics = true` and be registered with `CausticReceivers`.
+Do not leave new props caustic-dark simply because they bypass the facility
+manager.
 
 The active facility should own body posture only for the duration of the ride.
 The shared manager should remain the owner of prompts, `E`, touch action,

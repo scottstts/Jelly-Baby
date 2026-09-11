@@ -28,6 +28,7 @@
     "test:collision-warmup": "node --experimental-strip-types scripts/verify-collision-warmup.mjs",
     "test:render-warmup": "node --experimental-strip-types scripts/verify-render-warmup.mjs",
     "test:lighting": "node --experimental-strip-types scripts/verify-lighting.mjs",
+    "test:caustics": "node --experimental-strip-types scripts/verify-caustic-receivers.mjs",
     "test:facility-shadows": "node --experimental-strip-types scripts/verify-facility-shadows.mjs",
     "test:facility-sound": "node --experimental-strip-types scripts/verify-facility-sound.mjs",
     "test:multitouch": "node --experimental-strip-types scripts/verify-multitouch.mjs",

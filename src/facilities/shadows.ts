@@ -1,12 +1,14 @@
 import * as THREE from 'three/webgpu';
 import { float, positionWorld, uniform, vec3 } from 'three/tsl';
 import { SurfaceShadows } from './surface-shadows.ts';
+import type { CausticReceivers } from '../graphics/optics/caustic-receivers.ts';
 
 /** Fixed-world planar occlusion for opaque facilities under the measured window.
  * Geometry is shared with the visible objects; shadows never overlay the table.
  */
 export class FacilityShadows {
   readonly surfaces:SurfaceShadows;
+  readonly caustics:CausticReceivers|undefined;
   readonly target=new THREE.RenderTarget(512,512,{depthBuffer:false,samples:4});
   readonly originNode=uniform(new THREE.Vector2());
   readonly spanNode=uniform(new THREE.Vector2(1,1));
@@ -27,7 +29,8 @@ export class FacilityShadows {
     for(let object:THREE.Object3D|null=group;object;object=object.parent)if(!object.visible)return false;
     return true;
   }
-  constructor(incoming:THREE.Vector3,windowFraction:number) {
+  constructor(incoming:THREE.Vector3,windowFraction:number,caustics?:CausticReceivers) {
+    this.caustics=caustics;
     if(incoming.y>=-.01)throw new Error('Facility shadows require a downward light direction');
     this.surfaces=new SurfaceShadows(incoming,windowFraction);
     const x=incoming.x/incoming.y,z=incoming.z/incoming.y,floor=-.00005;
@@ -50,6 +53,8 @@ export class FacilityShadows {
     this.envelopes.push({group,bounds:envelope.clone(),visible:this.visible(group)});this.fitBounds();
     group.traverse(object=>{
       if(!(object instanceof THREE.Mesh))return;
+      if(object.receiveCaustics!==false)object.receiveCaustics=true;
+      this.caustics?.register(object);
       const shadow=new THREE.Mesh(object.geometry,this.material);
       shadow.matrixAutoUpdate=false;shadow.frustumCulled=false;this.scene.add(shadow);
       const contact=new THREE.Mesh(object.geometry,this.contactMaterial);

@@ -44,11 +44,14 @@ fence before the overlay closes. Failures use the existing terminal error UI
 with the transition stage. Later passages reuse geometry; disposal releases
 both worlds.
 
-Shadow proxies respect inherited world visibility. Ground and raised shadow
-cameras refit to active-world envelopes on passage. The toy-world envelope was
-expanded with the twofold road/scenery footprint, while returning to the
-playroom still restores the smaller active-world fit rather than permanently
-lowering its shadow resolution.
+Shadow proxies respect inherited world visibility. Both portal housings are
+registered as ordinary facility-lighting participants: their complete static
+visible envelope casts onto the tabletop and other raised surfaces, receives
+facility/jelly raised-surface shadows, and receives the shared jelly caustic field.
+Ground and raised shadow cameras refit to active-world envelopes on passage. The
+toy-world envelope was expanded with the twofold road/scenery footprint, while
+returning to the playroom still restores the smaller active-world fit rather
+than permanently lowering its shadow resolution.
 
 The portal is a stationary molded toy device: a deep cream aperture shell, a
 recessed seal and proud brass bezel on each face, three fixed pastel energy

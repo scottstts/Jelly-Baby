@@ -134,6 +134,7 @@ export function portalCollisionBoxes(portalX:number,portalZ:number):CollisionBox
 export class JellyPortal {
   readonly group=new T.Group();
   readonly collisionBoxes:readonly CollisionBox[];
+  readonly lightingEnvelope:T.Box3;
   private readonly clock=uniform(0);
   constructor(x:number,z:number,keepParts=false) {
     this.group.name='jelly-portal';
@@ -209,6 +210,7 @@ export class JellyPortal {
     }
     this.collisionBoxes=portalCollisionBoxes(x,z);
     casing.userData.keepParts=keepParts;batch(casing);
+    this.lightingEnvelope=new T.Box3().setFromObject(this.group);
     if(!keepParts)casing.children.forEach((child,index)=>{child.name=`batched-casing-${index}`;});
   }
   update(dt:number) {this.clock.value+=dt;}

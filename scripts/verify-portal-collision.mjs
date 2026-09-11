@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { loadModel } from './load-model.mjs';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { FacilityCollision } from '../src/facilities/collision.ts';
-import { portalCollisionBoxes } from '../src/facilities/portal/graphics.ts';
+import { FacilityShadows } from '../src/facilities/shadows.ts';
+import { JellyPortal, portalCollisionBoxes } from '../src/facilities/portal/graphics.ts';
+import { Vector3 } from 'three/webgpu';
 
 function moveBody(body,x,y,z) {
   const dx=x-body.center.x,dy=y-body.center.y,dz=z-body.center.z;
@@ -36,4 +38,18 @@ assert(boxes.length>64,'portal collision keeps a segmented housing and all solid
   collision.dispose();
 }
 
-console.log('Portal aperture pass-through and housing, rail, control, pod and mirrored-base collision verified');
+
+{
+  const portal=new JellyPortal(0,-.255),causticMeshes=new Set();
+  const shadows=new FacilityShadows(new Vector3(.494,-.748,-.443).normalize(),.7,{register(mesh){causticMeshes.add(mesh);}});
+  shadows.add(portal.group,portal.lightingEnvelope);
+  const meshes=[];portal.group.traverse(object=>{if(object.isMesh)meshes.push(object);});
+  assert(meshes.length>0,'portal keeps visible shadow/caustic receiver meshes after batching');
+  assert(meshes.every(mesh=>mesh.receiveCaustics),'portal hardware opts into universal caustic reception');
+  assert.equal(causticMeshes.size,meshes.length,'portal registers every visible mesh with caustic reception');
+  assert.equal(shadows.casters.length,meshes.length,'portal visible geometry casts into the facility ground shadow pass');
+  assert.equal(shadows.surfaces.casters.length,meshes.length,'portal visible geometry casts and receives raised-surface shadows');
+  shadows.dispose();portal.dispose();
+}
+
+console.log('Portal aperture, solid collision, universal shadows and caustic reception verified');

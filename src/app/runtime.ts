@@ -3,6 +3,7 @@ import { SoftBody } from '../physics/soft-body.js';
 import { PHYS } from '../physics/constants.js';
 import { loadBabyCage } from '../physics/baby-cage.ts';
 import { RefractiveLightField } from '../graphics/optics/refractive-light.js';
+import { CausticReceivers } from '../graphics/optics/caustic-receivers.ts';
 import { Baby, ABSORPTION } from '../graphics/character/baby.ts';
 import { loadEnvironment } from '../graphics/scene/environment.ts';
 import { makeTable } from '../graphics/scene/table.ts';
@@ -42,9 +43,10 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const body=new SoftBody(await loadBabyCage());
   const baby=new Baby(body);scene.add(baby.group);
   const optics=new RefractiveLightField(body.cage.opticalSurface,environment.incoming,ABSORPTION);
-  const facilityShadows=new FacilityShadows(environment.incoming,environment.windowFraction);
+  const caustics=new CausticReceivers(optics,environment);
+  const facilityShadows=new FacilityShadows(environment.incoming,environment.windowFraction,caustics);
   facilityShadows.surfaces.addBaby(baby.mesh);
-  const table=await makeTable(optics,environment,facilityShadows);scene.add(table.mesh);
+  const table=await makeTable(optics,environment,facilityShadows,caustics);scene.add(table.mesh);
   const composite=createComposite(renderer,scene,camera);
   const rig=new Locomotion(body);
   const facilities=new Facilities(body);
@@ -84,7 +86,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const transport=new OpticalTransport(optics,body,camera,environment.incoming,fail);
   const lightingMode=new LightingMode(renderer,scene,environment,light=>{
     optics.setLightDirection(light.incoming);transport.setLightDirection(light.incoming);
-    facilityShadows.setLighting(light.incoming,light.windowFraction);table.setLighting(light);
+    facilityShadows.setLighting(light.incoming,light.windowFraction);caustics.setLighting(light);table.setLighting(light);
   },fail);
   const resize=()=>resizeView(renderer,camera,input.controls);
   let resizeFrame=0;
@@ -159,9 +161,9 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const dispose=()=>{
     if(disposed)return;disposed=true;
     lightingMode.dispose();void renderer.setAnimationLoop(null);input.dispose();sound.dispose();transport.dispose();resizeObserver.disconnect();cancelAnimationFrame(resizeFrame);
-    worlds.dispose();facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();composite.dispose();baby.dispose();table.dispose();environment.dispose();optics.dispose();renderer.dispose();
+    worlds.dispose();facilities.dispose();facilityShadows.dispose();caustics.dispose();flavorPicker.dispose();composite.dispose();baby.dispose();table.dispose();environment.dispose();optics.dispose();renderer.dispose();
   };
   window.addEventListener('pagehide',event=>{if(!event.persisted)dispose();});
   if(import.meta.hot)import.meta.hot.dispose(dispose);
-  return {stop:()=>{disposed=true;worlds.dispose();lightingMode.dispose();input.clear();facilities.dispose();facilityShadows.dispose();flavorPicker.dispose();sound.dispose();transport.dispose();void renderer.setAnimationLoop(null);}};
+  return {stop:()=>{disposed=true;worlds.dispose();lightingMode.dispose();input.clear();facilities.dispose();facilityShadows.dispose();caustics.dispose();flavorPicker.dispose();sound.dispose();transport.dispose();void renderer.setAnimationLoop(null);}};
 }

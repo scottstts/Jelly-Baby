@@ -8,10 +8,13 @@ import { Trampoline } from '../src/worlds/main/facilities/trampoline/graphics.ts
 import { TRAMPOLINE } from '../src/worlds/main/facilities/trampoline/physics.ts';
 
 const incoming=new Vector3(.494,-.748,-.443).normalize();
-const shadows=new FacilityShadows(incoming,.7),swing=new Swing();
+const causticMeshes=new Set();
+const shadows=new FacilityShadows(incoming,.7,{register(mesh){causticMeshes.add(mesh);}}),swing=new Swing();
 shadows.add(swing.group,new Box3(new Vector3(SWING.x-.10,0,SWING.z-.15),new Vector3(SWING.x+.10,SWING.height+.02,SWING.z+.15)));
 const visible=[];swing.group.traverse(object=>{if(object.isMesh)visible.push(object);});
 assert(visible.every(mesh=>!mesh.material.transparent),'no coplanar transparent shadow overlays remain');
+assert(visible.every(mesh=>mesh.receiveCaustics),'facility registration opts every plausible descendant into caustics');
+assert.equal(causticMeshes.size,visible.length,'facility registration forwards every opted-in mesh to the caustic receiver layer');
 let renders=0;
 let projectionChecks=0,oldMappingError=0;
 function verifyTableLookup(scene,camera,sources) {

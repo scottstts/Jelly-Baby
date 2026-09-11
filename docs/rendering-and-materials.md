@@ -97,8 +97,9 @@ direction, color, shadow fraction, and transmitted irradiance; PMREM still
 includes the entire image. This remains a dominant-source approximation: ambient
 fill and other emitters contribute illumination without separate shadow maps.
 
-Switching updates table uniforms, GPU caustic direction and flux correction,
-facility ground projection, and raised-surface depth cameras together. Swept
+Switching updates table uniforms, shared caustic receiver irradiance/color, GPU
+caustic direction and flux correction, facility ground projection, and
+raised-surface depth cameras together. Swept
 bounds are refitted for the longer night shadows and all shadow caches are
 invalidated. The worker receives a lighting revision; old directional results
 are discarded and its shadow texture is cleared until the fresh field arrives.
@@ -122,13 +123,19 @@ The physical node material combines the wood with:
 
 - optical shadow and near-floor contact from the RGBA shadow texture;
 - facility shadow/contact from the separate 512² facility target;
-- the GPU caustic texture, multiplied by measured window irradiance and color;
+- the shared GPU caustic receiver term, multiplied by measured window irradiance and color;
 - a small reduction in albedo under the window's occluded diffuse contribution;
   and
 - roughness in the range produced by the source roughness map.
 
 A deterministic 3×3 tent sample softens facility masks. The material does not
 use transparent ground overlays or nearly coplanar shadow geometry.
+
+The tabletop is no longer a one-off caustic consumer. It sets
+`receiveCaustics = true` and registers with the same `CausticReceivers` layer as
+scene facilities, while retaining its existing wood-albedo and facility-shadow
+overrides. Facility PBR materials receive the same floor-projected caustic field
+through their own albedo nodes.
 
 ## Baby material and render order
 

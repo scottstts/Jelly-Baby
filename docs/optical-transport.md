@@ -2,8 +2,8 @@
 
 The jelly's appearance is built from two related but separate optical paths:
 
-1. a synchronous GPU caustic field that follows the current shape and feeds the
-   table's emissive response; and
+1. a synchronous GPU caustic field that follows the current shape and feeds a
+   shared scene-wide caustic receiver layer; and
 2. an asynchronous worker path that updates directional shadow/contact data and
    view-dependent thickness for the transmissive body material.
 
@@ -40,7 +40,7 @@ render targets:
 | Front depth | 128², half-float + depth | Light-space front intersection. |
 | Back depth | 128², half-float + depth | Light-space back intersection. |
 | Raw caustic | 160², half-float | Additive projected transmitted energy. |
-| Filtered caustic | 160², half-float | Table-facing texture exposed as `lightTexture`. |
+| Filtered caustic | 160², half-float | Shared receiver texture exposed as `lightTexture`. |
 
 The optical surface uses TSL attributes for four cage IDs and weights. A storage
 buffer packs the current cage positions, and the GPU position node reconstructs
@@ -71,6 +71,24 @@ The caustic material is tone-map-exempt and additive. Its RGB energy uses one
 shared refracted path; the selected flavor's three absorption coefficients are
 applied independently along that path. This is a perceptual real-time optical
 model rather than three separately traced spectral simulations.
+
+[`CausticReceivers`](../src/graphics/optics/caustic-receivers.ts) is the
+receiver-side interface for that same field. The projection remains the existing
+planar XZ/tabletop projection; universal reception does not add another caustic
+simulation or rerun refraction per object. A plausible scene receiver sets
+`receiveCaustics = true` and is registered once with the receiver layer. The
+layer injects the existing caustic texture into PBR node-material emissive
+response, multiplied by the receiver albedo and the same measured irradiance and
+source color used by the tabletop. Existing emissive nodes are added to rather
+than replaced. `FacilityShadows.add(...)` opts all descendant facility meshes in
+automatically, so current and future ordinary set pieces receive caustics by
+default. The tabletop uses the same receiver layer with its existing
+facility-shadow visibility mask.
+
+The scene rule is intentionally broad: **every opaque/material surface that could
+plausibly be illuminated by the jelly caustic should receive it**. Exceptions
+should be deliberate optical cases, such as the transmitting jelly itself or
+non-surface effects, rather than omissions made for convenience.
 
 The field is updated only when forced, when the body surface revision changes,
 when the center moves, or when flavor absorption or the lighting mode changes. Light direction and the
