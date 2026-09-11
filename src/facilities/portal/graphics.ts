@@ -54,23 +54,29 @@ function portalRailPath(face:number,index:number,arcSegments=30) {
   const start=center-PORTAL_DATUM.cartridgeHalfSpan,end=center+PORTAL_DATUM.cartridgeHalfSpan;
   const z=face*PORTAL_DATUM.faceDepth;
   const point=(radius:number,angle:number)=>new T.Vector3(radius*Math.cos(angle),radius*Math.sin(angle),z);
-  const startRadial=new T.Vector3(Math.cos(start),Math.sin(start),0);
   const startTangent=new T.Vector3(-Math.sin(start),Math.cos(start),0);
-  const endRadial=new T.Vector3(Math.cos(end),Math.sin(end),0);
   const endTangent=new T.Vector3(-Math.sin(end),Math.cos(end),0);
-  const socketStart=point(PORTAL_DATUM.railSocketRadius,start);
+  // Give each socket a small circumferential lead-in. With the socket and arc
+  // endpoint on the same radial line, a 90-degree tangent turn is forced into
+  // too little space and the swept tube pinches at the elbow. Offsetting only
+  // the socket angle creates a proper-radius bend without moving the outer arc.
+  const socketAngleOffset=.075;
+  const socketStartAngle=start-socketAngleOffset;
+  const socketEndAngle=end+socketAngleOffset;
+  const startSocketRadial=new T.Vector3(Math.cos(socketStartAngle),Math.sin(socketStartAngle),0);
+  const endSocketRadial=new T.Vector3(Math.cos(socketEndAngle),Math.sin(socketEndAngle),0);
+  const socketStart=point(PORTAL_DATUM.railSocketRadius,socketStartAngle);
   const outerStart=point(PORTAL_DATUM.cartridgeRadius,start);
   const outerEnd=point(PORTAL_DATUM.cartridgeRadius,end);
-  const socketEnd=point(PORTAL_DATUM.railSocketRadius,end);
-  const tangentReach=(PORTAL_DATUM.cartridgeRadius-PORTAL_DATUM.railSocketRadius)*.68;
-  const startControlA=socketStart.clone().addScaledVector(startRadial,tangentReach);
-  const startControlB=outerStart.clone().addScaledVector(startTangent,-tangentReach);
-  const endControlA=outerEnd.clone().addScaledVector(endTangent,tangentReach);
+  const socketEnd=point(PORTAL_DATUM.railSocketRadius,socketEndAngle);
+  const socketReach=.004;
+  const outerReach=.0095;
+  const startControlA=socketStart.clone().addScaledVector(startSocketRadial,socketReach);
+  const startControlB=outerStart.clone().addScaledVector(startTangent,-outerReach);
+  const endControlA=outerEnd.clone().addScaledVector(endTangent,outerReach);
   // The final cubic arrives at the socket along the inward radial tangent.
-  const endControlB=socketEnd.clone().addScaledVector(endRadial,tangentReach);
-  // Four transition rings describe the compact cubic while keeping every
-  // emitted ring on a stable swept normal field.
-  const bendSegments=Math.max(4,Math.round(arcSegments*.13));
+  const endControlB=socketEnd.clone().addScaledVector(endSocketRadial,socketReach);
+  const bendSegments=Math.max(8,Math.round(arcSegments*.27));
   const path:T.Vector3[]=[];
   for(let i=0;i<=bendSegments;i++)path.push(cubicPoint(socketStart,startControlA,startControlB,outerStart,i/bendSegments));
   for(let i=1;i<arcSegments;i++)path.push(point(PORTAL_DATUM.cartridgeRadius,start+(end-start)*i/arcSegments));
