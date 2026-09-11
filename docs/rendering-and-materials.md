@@ -122,7 +122,9 @@ floor so its visible surface meets the contact and receiver conventions.
 The physical node material combines the wood with:
 
 - optical shadow and near-floor contact from the RGBA shadow texture;
-- facility shadow/contact from the separate 512² facility target;
+- facility shadow/contact from the separate facility target, 512² at the main
+  playroom footprint and resized for larger active-world footprints to preserve
+  its world-space texel density;
 - the shared GPU caustic receiver term, multiplied by measured window irradiance and color;
 - a small reduction in albedo under the window's occluded diffuse contribution;
   and

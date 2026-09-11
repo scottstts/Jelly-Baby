@@ -3,16 +3,19 @@ import { float, positionWorld, uniform, vec3 } from 'three/tsl';
 import { SurfaceShadows } from './surface-shadows.ts';
 import type { CausticReceivers } from '../graphics/optics/caustic-receivers.ts';
 
+export const FACILITY_SHADOW_SIZE=512;
+
 /** Fixed-world planar occlusion for opaque facilities under the measured window.
  * Geometry is shared with the visible objects; shadows never overlay the table.
  */
 export class FacilityShadows {
   readonly surfaces:SurfaceShadows;
   readonly caustics:CausticReceivers|undefined;
-  readonly target=new THREE.RenderTarget(512,512,{depthBuffer:false,samples:4});
+  readonly target=new THREE.RenderTarget(FACILITY_SHADOW_SIZE,FACILITY_SHADOW_SIZE,{depthBuffer:false,samples:4});
   readonly originNode=uniform(new THREE.Vector2());
   readonly spanNode=uniform(new THREE.Vector2(1,1));
   readonly worldToUVNode=uniform(new THREE.Matrix3());
+  readonly shadowTexelNode=uniform(new THREE.Vector2(1/FACILITY_SHADOW_SIZE,1/FACILITY_SHADOW_SIZE));
   private readonly scene=new THREE.Scene();
   private readonly camera=new THREE.OrthographicCamera(-1,1,1,-1,.01,2);
   private readonly material=new THREE.MeshBasicNodeMaterial({color:0xff0000,depthTest:false,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,
@@ -25,6 +28,7 @@ export class FacilityShadows {
   private projectionVersion=0;
   private targetDirty=true;
   private readonly envelopes:{group:THREE.Group;bounds:THREE.Box3;visible:boolean}[]=[];
+  private referenceSpan:THREE.Vector2|undefined;
   private visible(group:THREE.Object3D) {
     for(let object:THREE.Object3D|null=group;object;object=object.parent)if(!object.visible)return false;
     return true;
@@ -83,9 +87,13 @@ export class FacilityShadows {
       }
     }
     const padded=this.bounds.clone().expandByScalar(.012),span=padded.getSize(new THREE.Vector2());
+    const width=this.referenceSpan?Math.max(FACILITY_SHADOW_SIZE,Math.ceil(FACILITY_SHADOW_SIZE*span.x/this.referenceSpan.x)):FACILITY_SHADOW_SIZE;
+    const height=this.referenceSpan?Math.max(FACILITY_SHADOW_SIZE,Math.ceil(FACILITY_SHADOW_SIZE*span.y/this.referenceSpan.y)):FACILITY_SHADOW_SIZE;
+    if(this.target.width!==width||this.target.height!==height)this.target.setSize(width,height);
+    this.shadowTexelNode.value.set(1/width,1/height);
     this.projectionVersion++;
     this.originNode.value.copy(padded.min);this.spanNode.value.copy(span);
-    this.surfaces.setGroundFootprint(span);
+    this.surfaces.setGroundFootprint(span,width,height);
     // WebGPU raster rows run downward: UV.v = 1 - normalized world Z.
     // WGSLNodeBuilder.isFlipY() is false in the pinned Three version, so the
     // texture node does NOT supply this conversion. Keep the actual lookup
@@ -99,6 +107,7 @@ export class FacilityShadows {
     this.camera.bottom=padded.min.y;this.camera.top=padded.max.y;this.camera.updateProjectionMatrix();
   }
   update(renderer:THREE.WebGPURenderer) {
+    if(!this.referenceSpan&&!this.bounds.isEmpty())this.referenceSpan=this.spanNode.value.clone();
     let changedWorld=false;
     for(const item of this.envelopes){const visible=this.visible(item.group);if(visible!==item.visible){item.visible=visible;changedWorld=true;}}
     if(changedWorld){this.fitBounds();this.targetDirty=true;}

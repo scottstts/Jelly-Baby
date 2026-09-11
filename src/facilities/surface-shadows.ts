@@ -3,6 +3,7 @@ import { Fn, float, normalWorldGeometry, positionWorld, texture, uniform, vec2, 
 
 export const SURFACE_SHADOW_SIZE=2048;
 export const SURFACE_SHADOW_BIAS=.0002; // metres, independent of the fitted depth range
+const GROUND_SHADOW_SIZE=512;
 type ReceiverDepth={source:THREE.Mesh;proxy:THREE.Mesh;scene:THREE.Scene;target:THREE.RenderTarget;dirty:boolean};
 
 /** Local window occlusion between raised surfaces, independent of table masks. */
@@ -88,10 +89,10 @@ export class SurfaceShadows {
   }
 
   /** Reuse the table's 1.5-texel tent spacing, expressed in world metres. */
-  setGroundFootprint(span:THREE.Vector2) {
+  setGroundFootprint(span:THREE.Vector2,groundWidth=GROUND_SHADOW_SIZE,groundHeight=GROUND_SHADOW_SIZE) {
     const m=this.matrixNode.value.elements;
-    this.filterXNode.value.set(m[0],-m[1]).multiplyScalar(.5*span.x*1.5/512);
-    this.filterZNode.value.set(m[8],-m[9]).multiplyScalar(.5*span.y*1.5/512);
+    this.filterXNode.value.set(m[0],-m[1]).multiplyScalar(.5*span.x*1.5/groundWidth);
+    this.filterZNode.value.set(m[8],-m[9]).multiplyScalar(.5*span.y*1.5/groundHeight);
   }
 
   private occlusion(target:THREE.RenderTarget,receiverTarget?:THREE.RenderTarget) {

@@ -162,12 +162,14 @@ the established opaque shadow/contact behavior.
 
 ## Facility shadows are separate
 
-Opaque swing and trampoline geometry is handled by
+Opaque facility geometry is handled by
 [`FacilityShadows`](../src/facilities/shadows.ts), not by the optical
-worker. It renders complete facility geometry into a fixed-world 512² target
-with red directional shadow and green near-floor contact channels. The table
-combines this target with the optical field using a deterministic tent filter.
-See [Facilities](facilities.md) for its invalidation and swept-bounds rules.
+worker. It renders complete facility geometry into a 512² main-world target,
+resizing that target for larger active-world footprints so ground texel density
+does not fall when the toy track is active. It stores red directional shadow and
+green near-floor contact channels. The table combines this target with the
+optical field using a deterministic tent filter. See [Facilities](facilities.md)
+for its invalidation and swept-bounds rules.
 
 ## Current helper status
 

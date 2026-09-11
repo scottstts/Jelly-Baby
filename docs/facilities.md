@@ -204,7 +204,10 @@ the volume is doing its job.
 opaque facilities fixed-world shadows without adding transparent geometry to the
 table. Each facility registers a world-space `Box3` that covers its entire
 motion envelope. The constructor projects the bounds along the measured
-downward window direction and builds a fixed 512² orthographic target.
+downward window direction and builds a 512² orthographic target for the main
+playroom footprint. If the active world is larger, the target grows in proportion
+to its fitted footprint so its world-space texel density stays the same; returning
+to the playroom restores the original target size.
 
 Each descendant mesh is represented twice in the shadow scene:
 

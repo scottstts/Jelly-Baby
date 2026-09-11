@@ -29,7 +29,7 @@ export async function makeTable(optics:RefractiveLightField,light:{color:THREE.C
   let facilityMask=vec2(0,0).add(0);
   for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++) {
     const weight=(x===0?2:1)*(y===0?2:1)/16;
-    facilityMask=facilityMask.add(texture(facilities.target.texture,facilityUV.add(vec2(x,y).mul(1.5/512))).rg.mul(weight));
+    facilityMask=facilityMask.add(texture(facilities.target.texture,facilityUV.add(vec2(x,y).mul(facilities.shadowTexelNode).mul(1.5))).rg.mul(weight));
   }
   const facilityShadow=facilityMask.x.mul(facilityInside),facilityContact=facilityMask.y.mul(facilityInside);
   const visibility=float(1).sub(shadow).mul(float(1).sub(facilityShadow));

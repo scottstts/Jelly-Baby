@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Box3, BoxGeometry, Group, Mesh, MeshPhysicalNodeMaterial, Vector3, WebGPUCoordinateSystem } from 'three/webgpu';
 import { SurfaceShadows, SURFACE_SHADOW_SIZE, SURFACE_SHADOW_BIAS } from '../src/facilities/surface-shadows.ts';
-import { FacilityShadows } from '../src/facilities/shadows.ts';
+import { FacilityShadows, FACILITY_SHADOW_SIZE } from '../src/facilities/shadows.ts';
 import { Swing } from '../src/worlds/main/facilities/swing/graphics.ts';
 import { SWING } from '../src/worlds/main/facilities/swing/physics.ts';
 import { Trampoline } from '../src/worlds/main/facilities/trampoline/graphics.ts';
@@ -55,6 +55,8 @@ const originalTarget={},renderer={
   },
 };
 shadows.update(renderer);assert.equal(renders,1);
+assert.equal(shadows.target.width,FACILITY_SHADOW_SIZE);
+assert.equal(shadows.target.height,FACILITY_SHADOW_SIZE);
 shadows.update(renderer);assert.equal(renders,1,'idle shadow reuses its exact mask');
 const origin=shadows.originNode.value.clone(),span=shadows.spanNode.value.clone();
 for(const angle of [-SWING.maxAngle,-.4,0,.000001,.4,SWING.maxAngle]) {
@@ -117,11 +119,11 @@ receiver.position.copy(caster.position).addScaledVector(incoming,.08);group.add(
 surfaces.add(group,new Box3().setFromObject(group));
 const jelly=new Mesh(new BoxGeometry(.02,.04,.02),new MeshPhysicalNodeMaterial({transmission:1}));
 jelly.position.copy(caster.position).addScaledVector(incoming,.04);surfaces.addBaby(jelly);
-surfaces.setGroundFootprint(shadows.spanNode.value);
+surfaces.setGroundFootprint(shadows.spanNode.value,shadows.target.width,shadows.target.height);
 const centre=new Vector3(0,.05,0).applyMatrix4(surfaces.matrixNode.value);
-for(const [axis,span,step] of [[new Vector3(1,0,0),shadows.spanNode.value.x,surfaces.filterXNode.value],
-  [new Vector3(0,0,1),shadows.spanNode.value.y,surfaces.filterZNode.value]]) {
-  const shifted=new Vector3(0,.05,0).addScaledVector(axis,span*1.5/512).applyMatrix4(surfaces.matrixNode.value);
+for(const [axis,span,step,resolution] of [[new Vector3(1,0,0),shadows.spanNode.value.x,surfaces.filterXNode.value,shadows.target.width],
+  [new Vector3(0,0,1),shadows.spanNode.value.y,surfaces.filterZNode.value,shadows.target.height]]) {
+  const shifted=new Vector3(0,.05,0).addScaledVector(axis,span*1.5/resolution).applyMatrix4(surfaces.matrixNode.value);
   assert(Math.abs((shifted.x-centre.x)*.5-step.x)<1e-12);
   assert(Math.abs((shifted.y-centre.y)*-.5-step.y)<1e-12,'surface tent spacing matches the ground filter in world metres');
 }

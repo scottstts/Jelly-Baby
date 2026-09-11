@@ -47,5 +47,12 @@ for(const [direction,fraction] of [[night.incoming,night.windowFraction],[day,.7
 }
 assert(shadows.worldToUVNode.value.equals(originalUV),'returning to day restores the ground mapping exactly');
 assert(shadows.surfaces.matrixNode.value.equals(originalMatrix),'returning to day restores the raised mapping exactly');
+const baselineWidth=shadows.target.width,baselineHeight=shadows.target.height,wideWorld=new THREE.Group();
+shadows.add(wideWorld,new THREE.Box3(new THREE.Vector3(-1,0,-1),new THREE.Vector3(1,.3,1)));
+assert(shadows.target.width>baselineWidth||shadows.target.height>baselineHeight,'larger active footprints raise ground shadow resolution');
+wideWorld.visible=false;
+shadowSyncRevision=shadows.update(renderer);shadows.surfaces.update(renderer,shadowSyncRevision);
+assert.equal(shadows.target.width,baselineWidth,'returning to the main footprint restores ground shadow width');
+assert.equal(shadows.target.height,baselineHeight,'returning to the main footprint restores ground shadow height');
 shadows.dispose();mesh.geometry.dispose();mesh.material.dispose();
 console.log('Night HDR measurement, shadow reprojection, cache invalidation and exact day restoration passed');
