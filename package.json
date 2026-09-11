@@ -13,6 +13,7 @@
     "test:swing": "node --experimental-strip-types scripts/verify-swing.mjs",
     "test:tricycle": "node --experimental-strip-types scripts/verify-tricycle.mjs",
     "test:toy-geometry": "node --experimental-strip-types scripts/verify-toy-geometry.mjs",
+    "test:portal-collision": "node --experimental-strip-types scripts/verify-portal-collision.mjs",
     "test:toy-driving": "node --experimental-strip-types scripts/verify-toy-driving.mjs",
     "test:world-travel": "node --experimental-strip-types scripts/verify-world-travel.mjs",
     "test:trampoline": "node --experimental-strip-types scripts/verify-trampoline.mjs",

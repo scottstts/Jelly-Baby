@@ -115,6 +115,10 @@ actual planar vehicle speed; playback rate and filter frequency increase with
 speed, while camera-relative distance and stereo pan keep it spatially subdued.
 The loop is not an engine sound and remains below impact/laughter levels. It is
 stopped on mute, reset, portal transition, hidden-tab cleanup and disposal.
+A faint pair of short, rounded axle squeaks runs as a separate filtered layer over
+the unchanged rolling sample. It shares the rolling layer's speed gate, gain
+envelope and spatial attenuation, so squeaks cannot continue independently when
+riding motion stops.
 
 `npm run test:tricycle` checks boarding, drive, braking, turning, volume and
 orientation stability, seat retention, ejection, facial timing, standing

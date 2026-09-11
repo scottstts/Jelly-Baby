@@ -37,6 +37,13 @@ there is no finite candidate. Reset clears every facility and hides the prompt;
 dispose aborts the manager's listeners, removes the prompt, and disposes every
 registered facility.
 
+The portal housing uses the same contract with `action = 'Use Portal'` and
+`mobileAction = 'Use Portal'`. Its interaction distance is finite only while
+the baby is near the active portal and travel is available, so it participates
+in nearest-candidate routing without adding a second prompt or key listener.
+Its `afterStep()` resolves only the authored solid housing and fittings; the
+membrane aperture remains open for the existing travel destination.
+
 ## Swing
 
 ### Geometry
@@ -342,7 +349,9 @@ must genuinely cross that boundary: a worn dressing-table item uses it to keep
 its attachment state, while a lightweight proxy in the toy-world manager owns
 only carried-item update and the low-priority take-off action. The playroom
 table collision and nearby-item interactions therefore stay scoped to the
-playroom.
+playroom. The portal itself is registered in each manager as the world-scoped
+`PortalFacility`, exposing `Use Portal` through the same nearest-candidate
+prompt while its housing collision stays local to that world.
 
 Optional `crying` is aggregated even after the rider releases active ownership,
 so post-crash recovery can use ordinary locomotion while retaining the facial

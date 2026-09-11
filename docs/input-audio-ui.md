@@ -163,7 +163,8 @@ texture. It begins only above a small motion threshold, follows absolute vehicle
 speed with smooth gain/filter/rate changes, and uses the same camera-relative
 distance attenuation and stereo direction as other positional effects. The layer
 is stopped together with facility audio on mute, reset, world travel, hidden-tab
-cleanup and disposal.
+cleanup and disposal. A separate higher-band squeak layer adds two subdued axle
+chirps per sample cycle through the same movement gate and spatial transport.
 
 Facility audio is event-driven by fixed-step motion, not a free-running loop.
 [`FacilityMotionSound`](../src/game/facility-sound.ts) detects swing reversals,

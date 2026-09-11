@@ -1,4 +1,4 @@
-import { Scene, Vector3, type WebGPURenderer, type PerspectiveCamera } from 'three/webgpu';
+import { Scene, type WebGPURenderer, type PerspectiveCamera } from 'three/webgpu';
 import type { SoftBody } from '../physics/soft-body.js';
 import type { FacilityShadows } from '../graphics/facility-shadows.ts';
 import { HOME_PORTAL, JellyPortal } from '../graphics/jelly-portal.ts';
@@ -6,6 +6,7 @@ import { cameraFacingYaw, portalArrivalZ, TRACK_PORTAL } from './toy-world-layou
 import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
 import { Facilities } from './facilities.ts';
 import type { TricycleFacility } from './tricycle-facility.ts';
+import { PortalFacility } from './portal-facility.ts';
 
 /** World ownership and loading are separate from the main simulation loop. */
 export class WorldTravel {
@@ -13,13 +14,14 @@ export class WorldTravel {
   readonly toys=new Scene();
   readonly toyFacilities:Facilities;
   readonly homePortal=new JellyPortal(HOME_PORTAL.x,HOME_PORTAL.z);
+  readonly homePortalFacility:PortalFacility;
   private returnPortal:JellyPortal|undefined;
+  private returnPortalFacility:PortalFacility|undefined;
   tricycle:TricycleFacility|undefined;
   inToys=false;
   loading=false;
   arrivalYaw=0;
   private cooldown=1;
-  private readonly previous=new Vector3();
   private disposed=false;
   private readonly scene:Scene;
   private readonly body:SoftBody;
@@ -34,14 +36,18 @@ export class WorldTravel {
   constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows,homeFacilities:Facilities,renderer:WebGPURenderer,camera:PerspectiveCamera,stage:(s:string)=>void,fail:(e:unknown)=>void) {
     this.scene=scene;this.body=body;this.shadows=shadows;this.homeFacilities=homeFacilities;this.renderer=renderer;this.camera=camera;this.stage=stage;this.fail=fail;
     this.toyFacilities=new Facilities(body);this.toyFacilities.enabled=false;
+    this.homePortalFacility=new PortalFacility(body,'home-portal-housing',HOME_PORTAL.x,HOME_PORTAL.z,this.homePortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
+    this.homeFacilities.add(this.homePortalFacility);
     this.home.add(this.homePortal.group);this.toys.visible=false;scene.add(this.home,this.toys);
   }
   get facilities(){return this.inToys?this.toyFacilities:this.homeFacilities;}
+  /** The active world's portal is a normal facility candidate for E/touch. */
+  get portalFacility():PortalFacility {return this.inToys?this.returnPortalFacility!:this.homePortalFacility;}
   reset() {
     const toyArrivalZ=this.inToys?portalArrivalZ(TRACK_PORTAL.z,this.body.center.z,this.camera.position.z):0;
     const toyArrivalYaw=this.inToys?cameraFacingYaw(this.body.center.x,this.body.center.z,this.camera.position.x,this.camera.position.z):0;
     this.facilities.reset();this.body.reset();
-    if(this.inToys){this.arrivalYaw=toyArrivalYaw;this.place(TRACK_PORTAL.x,toyArrivalZ,toyArrivalYaw);}else {this.arrivalYaw=0;this.previous.copy(this.body.center);}
+    if(this.inToys){this.arrivalYaw=toyArrivalYaw;this.place(TRACK_PORTAL.x,toyArrivalZ,toyArrivalYaw);}else this.arrivalYaw=0;
     this.cooldown=1;
   }
   private placeAtPortal(portal:{x:number;z:number}) {
@@ -56,18 +62,18 @@ export class WorldTravel {
       const rx=b.x[j]-cx,rz=b.x[j+2]-cz;
       b.x[j]=x+rx*c+rz*s;b.x[j+2]=z+rz*c-rx*s;
     }
-    b.previous.set(b.x);b.updateCenter();b.updateSurface();this.previous.copy(b.center);
+    b.previous.set(b.x);b.updateCenter();b.updateSurface();
   }
   step(h:number) {
     this.cooldown=Math.max(0,this.cooldown-h);
-    const portal=this.inToys?TRACK_PORTAL:HOME_PORTAL,b=this.body;
-    const dz=b.center.z-this.previous.z;
-    const crossed=(this.previous.z-portal.z)*(b.center.z-portal.z)<=0&&Math.abs(dz)>.000001;
-    const t=crossed?(portal.z-this.previous.z)/dz:0;
-    const x=this.previous.x+(b.center.x-this.previous.x)*t,y=this.previous.y+(b.center.y-this.previous.y)*t;
-    this.previous.copy(b.center);
-    if(this.loading||this.cooldown>0||b.grab||this.facilities.active)return;
-    if(crossed&&Math.hypot(x-portal.x,y-.075)<.057)void this.travel().catch(this.fail);
+  }
+  private portalAvailable() {
+    return !this.loading&&this.cooldown<=0&&!this.body.grab&&!this.facilities.active;
+  }
+  private requestTravel() {
+    if(!this.portalAvailable())return false;
+    void this.travel().catch(this.fail);
+    return true;
   }
   update(dt:number) {(this.inToys?this.returnPortal:this.homePortal)?.update(dt);}
   private async travel() {
@@ -82,6 +88,8 @@ export class WorldTravel {
       if(this.disposed)return;
       this.tricycle=new TricycleFacility(this.toys,this.body,this.shadows);this.toyFacilities.add(this.tricycle);
       this.returnPortal=new JellyPortal(TRACK_PORTAL.x,TRACK_PORTAL.z);this.toys.add(this.returnPortal.group);
+      this.returnPortalFacility=new PortalFacility(this.body,'toy-portal-housing',TRACK_PORTAL.x,TRACK_PORTAL.z,this.returnPortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
+      this.toyFacilities.add(this.returnPortalFacility);
       this.toyFacilities.warmupCollisions();
     }
     this.facilities.resetForTravel();this.inToys=!this.inToys;

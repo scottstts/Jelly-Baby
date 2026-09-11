@@ -101,6 +101,7 @@ The scripts in `package.json` are the supported entry points:
 | `npm run test:wearables` | Verify wearable geometry, swap/take-off routing, portal carry/take-off return, head-frame fit, bed return, shadow sync, and table collision. |
 | `npm run test:blanket-shadows` | Reproduce curved-blanket shadow acne and verify receiver depths, real blockers, and caching. |
 | `npm run test:facility-collision` | Verify tight facility volumes, surface clearance, and pre-contact hints. |
+| `npm run test:portal-collision` | Verify the portal aperture stays passable while housing, rails, controls, pods, and mirrored bases collide. |
 | `npm run test:collision-broadphase` | Compare optimized and exhaustive contacts exactly, verify safe rejection/contact chains, and measure collision CPU cost. |
 | `npm run test:facility-shadows` | Verify facility projection and invalidation. |
 | `npm run test:facility-sound` | Verify motion-event timing and procedural audio. |
@@ -183,6 +184,7 @@ deterministic PCM samples and variants, no DC offset, bounded sample peaks,
 distance/suspension filtering, six-voice limits, cached buffers, and cleanup. It
 also checks the tricycle rolling loop's deterministic bounded texture, silence at
 rest, speed-controlled start, parameter updates, buffer reuse and stop/restart
+cleanup, plus the separate speed-gated squeak layer and its paired source
 cleanup.
 
 ### Performance and architecture
@@ -234,6 +236,9 @@ npm run test:physics
 npm run test:swing
 npm run test:trampoline
 npm run test:wearables
+npm run test:toy-geometry
+npm run test:portal-collision
+npm run test:world-travel
 npm run test:facility-shadows
 npm run test:facility-sound
 npm run test:multitouch

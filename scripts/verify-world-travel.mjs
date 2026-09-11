@@ -11,7 +11,8 @@ assert.equal(portalArrivalZ(.6,.5,.8),.6+PORTAL_ARRIVAL_DISTANCE,'arrival follow
 assert.equal(portalArrivalZ(.6,.7,.4),.6-PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the negative portal side');
 assert(Math.abs(cameraFacingYaw(0,0,.12,.25)-Math.atan2(.12,.25))<1e-12,'portal arrival yaw faces the orbit camera');
 
-const element=()=>({hidden:false,className:'',textContent:'',append(){},remove(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){}}});
+const elements=[];
+const element=()=>{const value={hidden:false,className:'',textContent:'',children:[],append(...nodes){this.children.push(...nodes);},remove(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){}}};elements.push(value);return value;};
 const app=element(),loading=element();
 globalThis.document={createElement:element,querySelector:selector=>selector==='#loading'?loading:app};
 globalThis.window={addEventListener(){}};
@@ -33,10 +34,15 @@ worlds.onReady=()=>{ready++;camera.position.copy(body.center).add(cameraOffset);
 function place(x,z){const dx=x-body.center.x,dz=z-body.center.z;for(let j=0;j<body.x.length;j+=3){body.x[j]+=dx;body.x[j+2]+=dz;}body.updateCenter();}
 async function waitForTravel(){for(let i=0;i<200&&worlds.loading;i++)await new Promise(resolve=>globalThis.setTimeout(resolve,5));if(failure)throw failure;assert(!worlds.loading,'transition completes');}
 place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(1.1);
+assert.equal(worlds.portalFacility.action,'Use Portal');
+assert.equal(worlds.portalFacility.mobileAction,'Use Portal');
+worlds.facilities.update();
+assert.equal(elements.find(item=>item.className==='facility-hint')?.textContent,'Press E to Use Portal');
+assert.equal(elements.find(item=>item.className==='facility-button')?.textContent,'Use Portal');
 place(HOME_PORTAL.x+.10,HOME_PORTAL.z-.01);worlds.step(.01);
-assert.equal(moves,0,'passing outside the opening does not teleport');
-place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(.01);
-place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(.01);await waitForTravel();
+assert.equal(moves,0,'walking past the portal does not teleport');
+place(HOME_PORTAL.x,HOME_PORTAL.z+.01);assert(Number.isFinite(worlds.portalFacility.interactionDistance),'portal becomes the nearby facility candidate');
+assert(worlds.portalFacility.interact(),'portal interaction starts travel');await waitForTravel();
 assert(worlds.inToys&&worlds.toys.visible&&!worlds.home.visible);
 assert.equal(ordinaryResets,1,'ordinary home facilities reset when leaving through the portal');
 assert.equal(persistentResets,0,'portal-persistent equipment is not reset when leaving its home world');
@@ -49,11 +55,11 @@ assert(Math.abs(Math.sin(worlds.arrivalYaw)-cameraDirection.x)<1e-10&&Math.abs(M
 const c=Math.cos(worlds.arrivalYaw),s=Math.sin(worlds.arrivalYaw),node=facingNode*3;
 assert(Math.abs((body.x[node]-body.center.x)-(restDx*c+restDz*s))<1e-8&&Math.abs((body.x[node+2]-body.center.z)-(restDz*c-restDx*s))<1e-8,'teleported soft body is physically rotated to the camera-facing yaw');
 const bike=worlds.tricycle;assert(bike);
-place(TRACK_PORTAL.x,TRACK_PORTAL.z+.01);worlds.step(.01);assert.equal(moves,1,'arrival cooldown prevents bounce-back');
-place(TRACK_PORTAL.x,TRACK_PORTAL.z-.01);worlds.step(1.1);await waitForTravel();
+place(TRACK_PORTAL.x,TRACK_PORTAL.z+.01);worlds.step(.01);assert.equal(moves,1,'arrival cooldown prevents bounce-back');assert.equal(worlds.portalFacility.interactionDistance,Infinity,'arrival cooldown hides the portal affordance');
+worlds.step(1.1);assert(Number.isFinite(worlds.portalFacility.interactionDistance));assert(worlds.portalFacility.interact(),'return portal interaction starts travel');await waitForTravel();
 assert(!worlds.inToys&&home.enabled&&!worlds.toyFacilities.enabled);
 assert.equal(compiles,2);assert.equal(renders,2);assert.equal(ready,2);
-place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);await waitForTravel();
+place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);assert(worlds.portalFacility.interact(),'later portal visits reuse the facility');await waitForTravel();
 assert(worlds.inToys);assert.equal(worlds.tricycle,bike,'later visits reuse geometry');
 bike.physics.speed=.2;worlds.reset();assert.equal(bike.physics.speed,0);assert(worlds.inToys,'reset stays in selected world');
 worlds.dispose();home.dispose();assert.equal(scene.children.length,0);

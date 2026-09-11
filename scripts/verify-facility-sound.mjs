@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { FacilityAudio, FacilityMotionSound, makeFacilitySample } from '../src/game/facility-sound.ts';
-import { makeTricycleRollSample, TricycleRollAudio } from '../src/game/tricycle-sound.ts';
+import { makeTricycleRollSample, makeTricycleSqueakSample, TricycleRollAudio } from '../src/game/tricycle-sound.ts';
 
 const events=[],motion=new FacilityMotionSound(event=>events.push(event),{x:0,y:0,z:0});
 for(let i=0;i<240;i++)motion.swing(1/240,0,0,false);
@@ -67,27 +67,38 @@ for(const sampleRate of [44100,48000]) {
   const peak=data.reduce((max,value)=>Math.max(max,Math.abs(value)),0),mean=data.reduce((sum,value)=>sum+value,0)/data.length;
   assert(peak>.05&&peak<.4,'rolling source stays bounded before its quiet output gain');
   assert(Math.abs(mean)<.01,'rolling source has no meaningful DC offset');
+  const squeak=makeTricycleSqueakSample(sampleRate);
+  assert.equal(squeak.length,data.length);
+  assert(squeak.every(Number.isFinite));
+  assert(squeak.some(value=>Math.abs(value)>.01),'squeak has an audible source signal');
+  assert(squeak.every(value=>Math.abs(value)<.19),'squeak source remains bounded before its quiet output gain');
+  assert.equal(squeak[0],0);assert.equal(squeak.at(-1),0);
+  assert(squeak.filter(value=>value===0).length>squeak.length*.75,'chirps leave generous silent gaps');
 }
 
 const param=value=>({value,setTargetAtTime(next){this.value=next;}});
-let rollStarts=0,rollStops=0,rollBuffers=0,lastGain,lastFilter,lastPanner,lastSource;
+let rollStarts=0,rollStops=0,rollBuffers=0,sourceCalls=0,filterCalls=0,gainCalls=0,lastGain,lastSqueakGain,lastFilter,lastSqueakFilter,lastPanner,lastSource,lastSqueakSource;
 const connectable=()=>({connect(target){return target;},disconnect(){}});
 const rollCtx={state:'running',currentTime:0,sampleRate:48000,
   createBuffer(_channels,length){rollBuffers++;return {length,copyToChannel(){}};},
-  createBufferSource(){lastSource={...connectable(),buffer:null,loop:false,playbackRate:param(1),start(){rollStarts++;},stop(){rollStops++;}};return lastSource;},
-  createBiquadFilter(){lastFilter={...connectable(),type:'lowpass',frequency:param(0),Q:{value:0}};return lastFilter;},
-  createGain(){lastGain={...connectable(),gain:param(0)};return lastGain;},
+  createBufferSource(){sourceCalls++;const source={...connectable(),buffer:null,loop:false,playbackRate:param(1),start(){rollStarts++;},stop(){rollStops++;}};if(sourceCalls%2===1)lastSource=source;else lastSqueakSource=source;return source;},
+  createBiquadFilter(){filterCalls++;const filter={...connectable(),type:'lowpass',frequency:param(0),Q:{value:0}};if(filterCalls%2===1)lastFilter=filter;else lastSqueakFilter=filter;return filter;},
+  createGain(){gainCalls++;const gain={...connectable(),gain:param(0)};if(gainCalls%2===1)lastGain=gain;else lastSqueakGain=gain;return gain;},
   createStereoPanner(){lastPanner={...connectable(),pan:param(0)};return lastPanner;},
 };
 const roll=new TricycleRollAudio(rollCtx,connectable());
 roll.update(0,.2,0);assert.equal(rollStarts,0,'stationary tricycle does not start a loop');
-roll.update(.17,.2,.4);assert.equal(rollStarts,1,'meaningful tricycle motion starts exactly one rolling loop');
+roll.update(.17,.2,.4);assert.equal(rollStarts,2,'meaningful tricycle motion starts rolling and squeak loops together');
 assert(lastGain.gain.value>0&&lastGain.gain.value<.05,'rolling layer remains intentionally quiet');
+assert(lastSqueakGain.gain.value>0&&lastSqueakGain.gain.value<.10,'squeak layer is audible but subordinate');
 const midRate=lastSource.playbackRate.value,midFrequency=lastFilter.frequency.value;
+const midSqueakRate=lastSqueakSource.playbackRate.value,midSqueakFrequency=lastSqueakFilter.frequency.value;
 rollCtx.currentTime+=.1;roll.update(.34,.2,2);
 assert(lastSource.playbackRate.value>midRate&&lastFilter.frequency.value>midFrequency,'speed raises rolling rate and spectral center');
+assert(lastSqueakSource.playbackRate.value>midSqueakRate&&lastSqueakFilter.frequency.value>midSqueakFrequency,'speed raises squeak rate and spectral center');
 assert.equal(lastPanner.pan.value,.65,'rolling pan stays within its nonintrusive stereo bound');
 roll.update(0,.2,0);assert.equal(lastGain.gain.value,0,'stopped tricycle fades the persistent loop to silence');
-roll.stop();assert.equal(rollStops,1);roll.update(.1,.2,0);assert.equal(rollStarts,2,'rolling loop can restart after reset/world cleanup');assert.equal(rollBuffers,1,'restart reuses the cached rolling PCM');
-roll.dispose();assert.equal(rollStops,2);
+assert.equal(lastSqueakGain.gain.value,0,'stopped tricycle fades the squeak loop to silence');
+roll.stop();assert.equal(rollStops,2);roll.update(.1,.2,0);assert.equal(rollStarts,4,'rolling and squeak loops can restart after reset/world cleanup');assert.equal(rollBuffers,2,'restart reuses both cached PCM layers');
+roll.dispose();assert.equal(rollStops,4);
 console.log('Motion timing, silence at rest, sample bounds, tricycle rolling loop, audio caching, voice limits and cleanup passed');

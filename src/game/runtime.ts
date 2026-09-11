@@ -147,7 +147,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       input.update(dt);
       sound.listen(camera);
       const tricycle=worlds.inToys?worlds.tricycle?.physics:undefined;
-      if(tricycle)sound.tricycleMotion(tricycle.rollingSpeed,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
+      if(tricycle)sound.tricycleMotion(tricycle.riding?tricycle.rollingSpeed:0,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
       transport.follow();
       optics.update(renderer,body);
       table.mesh.position.x=body.center.x;table.mesh.position.z=body.center.z;
