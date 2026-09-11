@@ -59,7 +59,7 @@ constructs a horizontal basis, and gives the locomotion rig a normalized vector.
 gameplay binding. `E` is reserved for facility interaction; `Escape` releases
 all grips.
 
-Near an available head-wearable slot, `E` uses the same shared facility route to wear the nearest item and the touch button reads `Wear <name>`. While an item is worn, approaching a different table item changes the prompt to `Swap to <name>`, and walking away from the table changes it to `Take off <name>`. The ordinary Space jump also drives the wearable's short local detachment; facility-controlled motion and grabs do not.
+Near an available head-wearable slot, `E` uses the same shared facility route to wear the nearest item and the touch button reads `Wear <name>`. While an item is worn, approaching a different table item changes the prompt to `Swap to <name>`, and walking away from the table changes it to `Take off <name>`. Worn items persist through portal travel. In the toy world, take-off remains a fallback E action only when no nearer facility such as the tricycle needs that key; removing the item there returns it to its original dressing-table slot in the playroom. The ordinary Space jump also drives the wearable's short local detachment in either world; facility-controlled motion and grabs do not.
 
 The touch joystick clamps its knob to a circular track and maps horizontal and
 vertical offsets to the same camera-relative movement vector. Its pointer is
@@ -154,7 +154,16 @@ band than body contacts, and strength is derived from impact speed. The sound
 listener follows the camera and stores its right vector for facility panning.
 Tricycle collisions reuse the body-contact texture but trigger only on a meaningful
 new impact; sustained obstacle contact is held as one contact so it cannot retrigger
-at the 240 Hz physics rate.
+at the 240 Hz physics rate. Landing on a raised toy-track curb feeds its downward
+impact into the same body-contact debounce, so it sounds like an ordinary floor
+landing rather than a separate facility effect.
+
+A moving tricycle adds one deliberately quiet continuous procedural rolling
+texture. It begins only above a small motion threshold, follows absolute vehicle
+speed with smooth gain/filter/rate changes, and uses the same camera-relative
+distance attenuation and stereo direction as other positional effects. The layer
+is stopped together with facility audio on mute, reset, world travel, hidden-tab
+cleanup and disposal.
 
 Facility audio is event-driven by fixed-step motion, not a free-running loop.
 [`FacilityMotionSound`](../src/game/facility-sound.ts) detects swing reversals,

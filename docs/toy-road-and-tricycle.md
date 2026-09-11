@@ -79,8 +79,11 @@ low pen stays in the wheel-height path so the bicycle can roll over it. Three
 wheel support contacts still run at the 240 Hz physics step. On foot and after
 ejection, scenery uses the existing visible-surface facility solver; the curb
 uses the same contact response but only through the localized finite curb
-segments described above. The parked vehicle has a separate moving collision
-volume and cannot inherit static scenery bounds.
+segments described above. A downward curb-top contact forwards its incoming
+vertical speed into the locomotion landing gate, so landing on the curb produces
+the same damped jelly-body impact sound as landing on the tabletop/road without
+creating a separate per-step contact sound. The parked vehicle has a separate
+moving collision volume and cannot inherit static scenery bounds.
 
 Rider forces act on live FEM node velocities. Lower-body support and hand grips
 are stiff; the upper torso is compliant. Targets include steering-frame point
@@ -105,6 +108,13 @@ while two bodies remain touching. A short contact hold keeps tiny numerical
 separations from re-arming the sound, and sub-3.5 cm/s contacts remain silent.
 This mirrors the event/cooldown behavior of ordinary jelly impacts while still
 allowing a later genuine re-impact to sound again.
+
+Tricycle translation also drives one quiet, continuous procedural rolling layer.
+It is silent below 6 mm/s, then raises a filtered tyre/tread texture smoothly with
+actual planar vehicle speed; playback rate and filter frequency increase with
+speed, while camera-relative distance and stereo pan keep it spatially subdued.
+The loop is not an engine sound and remains below impact/laughter levels. It is
+stopped on mute, reset, portal transition, hidden-tab cleanup and disposal.
 
 `npm run test:tricycle` checks boarding, drive, braking, turning, volume and
 orientation stability, seat retention, ejection, facial timing, standing

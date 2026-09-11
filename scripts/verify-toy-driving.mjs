@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { PerspectiveCamera, Vector3, EventDispatcher } from 'three/webgpu';
+import { PerspectiveCamera, Scene, Vector3, EventDispatcher } from 'three/webgpu';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { loadModel } from './load-model.mjs';
 import { TricyclePhysics } from '../src/game/tricycle-physics.ts';
+import { TricycleFacility } from '../src/game/tricycle-facility.ts';
 import { ToyTrack } from '../src/graphics/toy-track.ts';
 import { TRACK_START, TRACK_WIDTH, ROAD_HEIGHT, CURB_HEIGHT, CURB_OUTER_EDGE, CURB_ROAD_EDGE, CURB_WIDTH, TRACK_RADIUS_SCALE, TRACK_SCENERY_SCALE, trackCurve, trackPoint, obstacles, roadLocation } from '../src/game/toy-track-layout.ts';
 import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL } from '../src/game/toy-world-layout.ts';
@@ -59,6 +60,17 @@ const leftReach=curbBody.center.x-restBounds.min.x;
 // is inside an obstacle that is fully enclosed by the body.
 moveBody(outerTreeBox.center.x+outerTreeBox.halfSize.x+leftReach-.006,curbBody.center.y,outerTreeBox.center.z);
 assert(treeCollision.resolveBoxes(track.treeBoxes),'jelly skin contact resolves against the cheap tree envelope');treeCollision.dispose();
+
+const landingBody=new SoftBody(loadModel()),landingFacility=new TricycleFacility(new Scene(),landingBody,{add(){}});
+const landingPoint=trackPoint(.08,(CURB_ROAD_EDGE+CURB_OUTER_EDGE)/2),landingBounds=landingBody.surface.geometry.boundingBox;
+assert(landingBounds,'landing test requires rest-space surface bounds');
+const bottomReach=landingBody.center.y-landingBounds.min.y,targetY=CURB_HEIGHT+bottomReach-.003;
+const landingDx=landingPoint.x-landingBody.center.x,landingDy=targetY-landingBody.center.y,landingDz=landingPoint.z-landingBody.center.z;
+for(let j=0;j<landingBody.x.length;j+=3){landingBody.x[j]+=landingDx;landingBody.x[j+1]+=landingDy;landingBody.x[j+2]+=landingDz;landingBody.velocity[j+1]=-.24;}
+landingBody.previous.set(landingBody.x);landingBody.updateCenter();landingBody.updateSurface();
+let curbImpact=0;landingFacility.onWalkCurbImpact=speed=>{curbImpact=speed;};landingFacility.afterStep();
+assert(curbImpact>.23&&curbImpact<.25,'landing on the raised curb emits the ordinary jelly impact speed');
+landingFacility.dispose();
 assert.equal(track.vehicleColliders.length,8,'four tall props and four houses block the tricycle');
 assert(Math.abs(track.obstacleBoxes[0].halfSize.x-.026)<1e-12&&Math.abs(track.obstacleBoxes[0].halfSize.z-.0135)<1e-12,'track obstacles keep their original physical size');
 assert(Math.abs(track.obstacleBoxes[5].halfSize.x-.083)<1e-12&&Math.abs(track.obstacleBoxes[5].halfSize.y-.082)<1e-12,'infield houses scale twofold with the enlarged world');
@@ -98,4 +110,4 @@ const returnedOffset=camera.position.clone().sub(controls.target),returnedPhi=Ma
 assert(Math.abs(camera.position.x)<.001&&camera.position.z<0,'release returns smoothly in under a second');
 assert(Math.abs(returnedPhi-controls.maxPolarAngle)<.001,'release returns to the lowest allowed grazing angle');
 const before=camera.position.clone();chase.update(camera,undefined,.1);assert(camera.position.equals(before),'walking camera unchanged');assert(controls.enableDamping);chase.dispose();
-track.dispose();console.log({width,portalClearance,arrivalClearance,peakHeight,peakPitch,minJ});console.log('Twofold track layout, broad walkable curbs, deliberate prop placement, rolling pen contact, soft rider and grazing chase/orbit handoff passed.');
+track.dispose();console.log({width,portalClearance,arrivalClearance,peakHeight,peakPitch,minJ});console.log('Twofold track layout, broad walkable curbs with landing audio, deliberate prop placement, rolling pen contact, soft rider and grazing chase/orbit handoff passed.');

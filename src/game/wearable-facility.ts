@@ -10,6 +10,7 @@ import type { Locomotion } from './locomotion.ts';
 /** The dressing table owns selection, table collision, and head attachment. */
 export class WearableFacility implements Facility {
   readonly id='head-wearable-table';
+  readonly persistAcrossTravel=true;
   readonly label='Wearables';
   readonly physics:WearablePhysics;
   readonly visual:WearableTable;
@@ -86,6 +87,16 @@ export class WearableFacility implements Facility {
   /** Ordinary locomotion calls this only for its own Space jump impulse. */
   jumpFromNormalLocomotion() {this.physics.jumpFromNormalLocomotion();}
 
+  /** A carried item can be removed away from the hidden dressing table. */
+  get canTakeOffCarried() {return this.physics.wornIndex!==null&&!this.physics.body.grab&&this.physics.body.grounded;}
+
+  takeOffCarried() {
+    if(!this.canTakeOffCarried)return false;
+    const index=this.physics.returnToTable();
+    if(index===-1)return false;
+    this.visual.setOnTable(index);return true;
+  }
+
   /** Beds remove a worn item immediately and leave it parked back on the table. */
   syncBedOccupancy(active:boolean) {
     if(!active)return;
@@ -95,4 +106,22 @@ export class WearableFacility implements Facility {
 
   reset() {this.physics.reset();this.visual.reset();}
   dispose() {this.collision.dispose();this.visual.dispose();}
+}
+
+/** Toy-world fallback interaction for an item whose table remains in the playroom. */
+export class CarriedWearableFacility implements Facility {
+  readonly id='carried-head-wearable';
+  readonly label='Wearable';
+  readonly persistAcrossTravel=true;
+  private readonly source:WearableFacility;
+  constructor(source:WearableFacility) {this.source=source;}
+  get active(){return false;}
+  get interactionDistance(){return this.source.canTakeOffCarried?Number.MAX_SAFE_INTEGER:Infinity;}
+  get action(){const index=this.source.physics.wornIndex;return index===null?'Wear':`Take off ${HEAD_WEARABLES[index].label}`;}
+  get mobileAction(){return this.action;}
+  interact(){return this.source.takeOffCarried();}
+  step(h:number){this.source.step(h);}
+  update(){this.source.update();}
+  reset(){/* The home owner keeps carried attire through toy-world resets. */}
+  dispose(){/* The home owner owns and disposes the shared visual/physics state. */}
 }

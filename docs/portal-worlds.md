@@ -21,8 +21,12 @@ button, initiates travel. Grabs and occupied facilities cannot initiate travel.
 `WorldTravel` owns two scene roots and independent facility managers. Only the
 current manager can show prompts, own input or run contacts. The baby, wood,
 environment, flavor, camera controls and optical transport are shared. Leaving
-resets that world's facilities, including returning wearables. Reset stays in
-the current world.
+resets ordinary facilities in that world, but a currently worn dressing-table
+item is explicitly travel-persistent: its visual remains parented to the baby and
+its head attachment continues updating in the toy world. A low-priority toy-world
+interaction exposes `Take off <name>` whenever no nearer facility owns E; taking
+it off reparents the item to its original slot on the hidden dressing table so it
+is waiting there on return. Reset stays in the current world.
 
 The toy world is imported and built on first passage. The existing loading
 screen paints before construction, collision warmup and shader compilation.

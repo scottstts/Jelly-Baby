@@ -68,6 +68,7 @@ export class TricyclePhysics {
     for(let i=0;i<this.obstacleContactHold.length;i++){this.obstacleContactHold[i]??=0;this.obstacleImpactArmed[i]??=0;this.obstacleStepClosing[i]??=0;}
   }
   get nearby(){return !this.crying&&!this.body.grab&&this.body.grounded&&this.body.center.distanceTo(this.position)<.13;}
+  get rollingSpeed(){return Math.hypot(this.speed,this.lateralSpeed);}
   toggle() {
     if(this.riding){this.leave();return true;}
     if(!this.nearby)return false;

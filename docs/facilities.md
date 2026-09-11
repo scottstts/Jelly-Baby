@@ -336,8 +336,16 @@ exclusive selection, and teardown.
 ## World-scoped facilities
 
 Each portal world owns a manager. `enabled` gates interaction, prompts and
-simulation in the inactive world. Optional `crying` is aggregated even after
-the rider releases active ownership, so post-crash recovery can use ordinary
-locomotion while retaining the facial expression. `showPrompt=false` hides
-the action during an ejection. See [Portal worlds](portal-worlds.md) and
+simulation in the inactive world. Portal travel normally resets the facilities
+owned by the world being left. `persistAcrossTravel` is reserved for state that
+must genuinely cross that boundary: a worn dressing-table item uses it to keep
+its attachment state, while a lightweight proxy in the toy-world manager owns
+only carried-item update and the low-priority take-off action. The playroom
+table collision and nearby-item interactions therefore stay scoped to the
+playroom.
+
+Optional `crying` is aggregated even after the rider releases active ownership,
+so post-crash recovery can use ordinary locomotion while retaining the facial
+expression. `showPrompt=false` hides the action during an ejection. See
+[Portal worlds](portal-worlds.md) and
 [Toy road and tricycle](toy-road-and-tricycle.md).

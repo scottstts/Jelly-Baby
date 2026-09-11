@@ -98,7 +98,7 @@ The scripts in `package.json` are the supported entry points:
 | `npm run test:swing` | Verify swing behavior and shared facility routing. |
 | `npm run test:trampoline` | Verify trampoline support, rebound, and transitions. |
 | `npm run test:bed` | Verify bed support, blanket settling, sleep/wake, and shadow registration. |
-| `npm run test:wearables` | Verify wearable geometry, swap/take-off routing, head-frame fit, bed return, shadow sync, and table collision. |
+| `npm run test:wearables` | Verify wearable geometry, swap/take-off routing, portal carry/take-off return, head-frame fit, bed return, shadow sync, and table collision. |
 | `npm run test:blanket-shadows` | Reproduce curved-blanket shadow acne and verify receiver depths, real blockers, and caching. |
 | `npm run test:facility-collision` | Verify tight facility volumes, surface clearance, and pre-contact hints. |
 | `npm run test:collision-broadphase` | Compare optimized and exhaustive contacts exactly, verify safe rejection/contact chains, and measure collision CPU cost. |
@@ -180,7 +180,10 @@ and expression recovery.
 [`scripts/verify-facility-sound.mjs`](../scripts/verify-facility-sound.mjs)
 checks silence at rest, swing event timing, trampoline event ordering,
 deterministic PCM samples and variants, no DC offset, bounded sample peaks,
-distance/suspension filtering, six-voice limits, cached buffers, and cleanup.
+distance/suspension filtering, six-voice limits, cached buffers, and cleanup. It
+also checks the tricycle rolling loop's deterministic bounded texture, silence at
+rest, speed-controlled start, parameter updates, buffer reuse and stop/restart
+cleanup.
 
 ### Performance and architecture
 

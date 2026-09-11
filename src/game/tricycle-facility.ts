@@ -18,6 +18,7 @@ export class TricycleFacility implements Facility {
   readonly visual:Tricycle;
   private readonly parkedBox=box(0,.026,0,.079,.052,.113);
   private readonly collisionBounds:CollisionBox[];
+  onWalkCurbImpact:(speed:number)=>void=()=>{};
   constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows) {
     this.visual=new Tricycle(fitGrips(body));
     this.physics=new TricyclePhysics(body,this.track.obstacleBoxes,true,this.track.vehicleColliders);this.collision=new FacilityCollision(body);
@@ -45,7 +46,16 @@ export class TricycleFacility implements Facility {
     // Walking and ejected bodies use the finite visible curb volumes instead.
     if(!this.physics.riding) {
       const curbs=this.track.curbsNear(this.physics.body.center.x,this.physics.body.center.z);
-      if(curbs.length)this.collision.resolveBoxes(curbs);
+      if(curbs.length) {
+        // Floor contacts are reported by the soft-body solver itself. Curbs are
+        // authored facility volumes, so preserve the incoming body speed here
+        // and feed a true landing into the same locomotion sound gate.
+        const verticalSpeed=this.bodyVerticalSpeed();
+        const hit=this.collision.resolveBoxes(curbs),resolvedVerticalSpeed=this.bodyVerticalSpeed();
+        // A side scrape can also resolve against a curb box. Only an upward
+        // impulse means the raised top actually arrested a downward landing.
+        if(hit&&verticalSpeed<-.13&&resolvedVerticalSpeed>verticalSpeed+1e-5)this.onWalkCurbImpact(-verticalSpeed);
+      }
     }
     if(this.physics.riding||this.physics.recovering)return;
     const p=this.physics.position,yaw=this.physics.yaw;
@@ -53,6 +63,11 @@ export class TricycleFacility implements Facility {
     Object.assign(this.parkedBox.xAxis,{x:Math.cos(yaw),y:0,z:-Math.sin(yaw)});
     Object.assign(this.parkedBox.zAxis,{x:Math.sin(yaw),y:0,z:Math.cos(yaw)});
     this.parkedCollision.resolveBoxes([this.parkedBox]);
+  }
+  private bodyVerticalSpeed() {
+    const body=this.physics.body;let speed=0;
+    for(let i=0;i<body.mass.length;i++)speed+=body.velocity[i*3+1]*body.mass[i]/body.totalMass;
+    return speed;
   }
   warmupCollision(){
     this.collision.warmupBoxes(this.track.boxes);

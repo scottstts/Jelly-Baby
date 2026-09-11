@@ -21,7 +21,7 @@ import { FacilityShadows } from '../graphics/facility-shadows.ts';
 import { LightingMode } from './lighting-mode.ts';
 import { BedFacility } from './bed-facility.ts';
 import { TrampolineFacility } from './trampoline-facility.ts';
-import { WearableFacility } from './wearable-facility.ts';
+import { CarriedWearableFacility, WearableFacility } from './wearable-facility.ts';
 import { warmMainScenePipelines } from '../graphics/render-warmup.ts';
 import { WorldTravel } from './world-travel.ts';
 
@@ -53,6 +53,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const bed=new BedFacility(worlds.home,body,facilityShadows);
   rig.onJump=()=>wearableTable.jumpFromNormalLocomotion();
   facilities.add(wearableTable);
+  worlds.toyFacilities.add(new CarriedWearableFacility(wearableTable));
   facilities.add(new SwingFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(new TrampolineFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(bed);
@@ -74,7 +75,10 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   worlds.onMove=()=>{input.clear();sound.stopFacilities();physicsClock.reset();};
   worlds.onReady=async()=>{
     input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();
-    if(worlds.tricycle)worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
+    if(worlds.tricycle){
+      worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
+      worlds.tricycle.onWalkCurbImpact=speed=>rig.surfaceImpact(speed);
+    }
     baby.update();optics.update(renderer,body,true);transport.follow();await transport.update();
   };
   const transport=new OpticalTransport(optics,body,camera,environment.incoming,fail);
@@ -142,6 +146,8 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       facilityShadows.surfaces.update(renderer,shadowSyncRevision);
       input.update(dt);
       sound.listen(camera);
+      const tricycle=worlds.inToys?worlds.tricycle?.physics:undefined;
+      if(tricycle)sound.tricycleMotion(tricycle.rollingSpeed,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
       transport.follow();
       optics.update(renderer,body);
       table.mesh.position.x=body.center.x;table.mesh.position.z=body.center.z;

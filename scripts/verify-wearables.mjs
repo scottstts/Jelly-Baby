@@ -5,7 +5,7 @@ import { SoftBody } from '../src/physics/soft-body.js';
 import { PHYS } from '../src/physics/constants.js';
 import { Locomotion } from '../src/game/locomotion.ts';
 import { HEAD_WEARABLES, WEARABLE_TABLE } from '../src/game/wearable-physics.ts';
-import { WearableFacility } from '../src/game/wearable-facility.ts';
+import { CarriedWearableFacility, WearableFacility } from '../src/game/wearable-facility.ts';
 import { BedFacility } from '../src/game/bed-facility.ts';
 import { BED } from '../src/game/bed-physics.ts';
 
@@ -102,6 +102,22 @@ assert.equal(facility.visual.items[1].root.position.x,HEAD_WEARABLES[1].slotX,'b
 assert(bed.interact(),'bed can be exited');
 assert.equal(facility.physics.wornIndex,null,'getting off bed does not auto-re-equip the item');
 
+// Portal travel must preserve the equipped item while the dressing table stays
+// in the playroom. The toy-world proxy is only a fallback take-off interaction.
+moveBody(body,WEARABLE_TABLE.x+HEAD_WEARABLES[2].slotX,WEARABLE_TABLE.z);
+assert(facility.interact(),'baseball cap can be equipped for travel');
+const carried=new CarriedWearableFacility(facility);
+assert(facility.persistAcrossTravel&&carried.persistAcrossTravel,'wearable state is explicitly portal-persistent');
+moveBody(body,.65,-.55);carried.update();babyGroup.updateWorldMatrix(true,true);
+assert.equal(facility.physics.wornIndex,2,'equipped cap remains worn after moving into another world');
+assert.equal(facility.visual.items[2].root.parent,babyGroup,'carried cap remains parented to the shared baby root');
+assert(Number.isFinite(carried.interactionDistance)&&carried.interactionDistance>1e6,'toy take-off is a fallback behind nearby facilities');
+assert.equal(carried.action,'Take off Baseball Cap');
+assert(carried.interact(),'carried attire can be taken off with the shared interaction');
+assert.equal(facility.physics.wornIndex,null);
+assert.equal(facility.visual.items[2].root.parent,facility.visual.group,'toy-world take-off reparents the cap to the hidden dressing table');
+assert.equal(facility.visual.items[2].root.position.x,HEAD_WEARABLES[2].slotX,'carried cap returns to its original dressing-table slot');
+
 const collisionBody=new SoftBody(loadModel()),collisionRig=new Locomotion(collisionBody);
 const collisionFacility=new WearableFacility(new Scene(),collisionBody,new Group(),collisionRig,{add(){}});
 const frontLeg=collisionFacility.visual.collisionBoxes[1];
@@ -114,4 +130,4 @@ const legAfter=boxPenetration(collisionBody,frontLeg);
 assert(legBefore>.001,'front leg test begins with a deliberate shallow surface penetration');
 assert(legAfter<legBefore&&legAfter<.001,'fitted table leg resolves the shallow walk-in contact');
 collisionFacility.dispose();bed.dispose();facility.reset();facility.dispose();
-console.log('Wearable table swapping, tuned fit, head-frame detachment, bed return, shadows and collision passed',{peak,legBefore,legAfter});
+console.log('Wearable table swapping, portal carry/take-off return, tuned fit, head-frame detachment, bed return, shadows and collision passed',{peak,legBefore,legAfter});

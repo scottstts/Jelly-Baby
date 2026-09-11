@@ -84,12 +84,14 @@ export class WorldTravel {
       this.returnPortal=new JellyPortal(TRACK_PORTAL.x,TRACK_PORTAL.z);this.toys.add(this.returnPortal.group);
       this.toyFacilities.warmupCollisions();
     }
-    this.facilities.reset();this.inToys=!this.inToys;
+    this.facilities.resetForTravel();this.inToys=!this.inToys;
     this.home.visible=!this.inToys;this.toys.visible=this.inToys;
     this.homeFacilities.enabled=!this.inToys;this.toyFacilities.enabled=this.inToys;
-    this.homeFacilities.update();this.toyFacilities.update();
     const portal=this.inToys?TRACK_PORTAL:HOME_PORTAL;
     this.placeAtPortal(portal);this.cooldown=1;
+    // Update after placement so cross-world attachments snap to the destination
+    // body before the hidden first render and GPU warmup.
+    this.homeFacilities.update();this.toyFacilities.update();
     await this.onReady();this.stage('Settling into the little world');
     const shadowRevision=this.shadows.update(this.renderer);
     this.shadows.surfaces.update(this.renderer,shadowRevision);

@@ -18,6 +18,11 @@ export class Locomotion {
   private lastImpact=-1;
   private lastStep=-1;
   onContact:(speed:number,foot:boolean)=>void=()=>{};
+  /** Share the normal landing debounce with contacts resolved by facilities. */
+  surfaceImpact(speed:number) {
+    if(speed<=.13||this.elapsed-this.lastImpact<=.11)return false;
+    this.onContact(speed,false);this.lastImpact=this.elapsed;return true;
+  }
   /** Emitted only when the ordinary locomotion jump actually launches. */
   onJump:()=>void=()=>{};
   readonly body:SoftBody;
@@ -87,9 +92,7 @@ export class Locomotion {
   afterStep() {
     let contact=0;
     for(let i=0;i<this.body.contact.length;i++) contact+=this.body.contact[i]*this.body.mass[i];
-    if(contact>0 && this.velocity.y<-.13 && this.elapsed-this.lastImpact>.11) {
-      this.onContact(-this.velocity.y,false); this.lastImpact=this.elapsed;
-    }
+    if(contact>0 && this.velocity.y<-.13)this.surfaceImpact(-this.velocity.y);
     const beat=Math.floor(this.phase/Math.PI);
     if(contact>0 && this.move.lengthSq()>.01 && beat!==this.lastStep) {
       this.lastStep=beat;

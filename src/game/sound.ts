@@ -1,5 +1,6 @@
 import type { PerspectiveCamera } from 'three/webgpu';
 import { FacilityAudio, type FacilitySoundEvent } from './facility-sound.ts';
+import { TricycleRollAudio } from './tricycle-sound.ts';
 type AudioWindow=Window&{webkitAudioContext?:typeof AudioContext};
 
 export class JellySound {
@@ -9,6 +10,7 @@ export class JellySound {
   private resumePromise:Promise<void>|null=null;
   private outputPrimed=false;
   private facilities:FacilityAudio|null=null;
+  private tricycleRoll:TricycleRollAudio|null=null;
   private listener={x:0,y:.12,z:.19,rightX:1,rightZ:0};
   private abort=new AbortController();
   muted=false;
@@ -32,6 +34,7 @@ export class JellySound {
       master.connect(compressor).connect(context.destination);
       this.context=context;this.master=master;this.compressor=compressor;
       this.facilities=new FacilityAudio(context,master);
+      this.tricycleRoll=new TricycleRollAudio(context,master);
       return context;
     } catch {
       if(context&&context.state!=='closed')void context.close().catch(()=>{});
@@ -70,7 +73,12 @@ export class JellySound {
     const l=this.listener,dx=event.x-l.x,dy=event.y-l.y,dz=event.z-l.z,distance=Math.hypot(dx,dy,dz);
     this.facilities?.play(event,distance,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance));
   };
-  stopFacilities() {this.facilities?.stop();}
+  stopFacilities() {this.facilities?.stop();this.tricycleRoll?.stop();}
+  tricycleMotion(speed:number,x:number,y:number,z:number) {
+    if(this.muted||document.hidden)return;
+    const l=this.listener,dx=x-l.x,dy=y-l.y,dz=z-l.z,distance=Math.hypot(dx,dy,dz);
+    this.tricycleRoll?.update(speed,distance,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance));
+  }
   contact(speed:number,foot:boolean) {
     const ctx=this.context, out=this.master;
     if(!ctx||!out||ctx.state==='closed'||this.muted) return;
@@ -95,7 +103,7 @@ export class JellySound {
     noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};
   }
   dispose() {
-    this.facilities?.dispose();this.facilities=null;
+    this.facilities?.dispose();this.facilities=null;this.tricycleRoll?.dispose();this.tricycleRoll=null;
     this.abort.abort();this.master?.disconnect();this.compressor?.disconnect();
     const context=this.context;this.context=null;this.master=null;this.compressor=null;this.resumePromise=null;
     if(context&&context.state!=='closed')void context.close().catch(()=>{});

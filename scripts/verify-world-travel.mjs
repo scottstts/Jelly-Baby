@@ -19,6 +19,9 @@ globalThis.requestAnimationFrame=callback=>globalThis.queueMicrotask(callback);
 let compiles=0,renders=0,ready=0,moves=0,failure;
 const renderer={compileAsync:async()=>{compiles++;},render(){renders++;},backend:{device:{queue:{onSubmittedWorkDone:async()=>{}}}}};
 const body=new SoftBody(loadModel()),home=new Facilities(body),scene=new Scene();
+let persistentResets=0,ordinaryResets=0;
+const dummy=(id,persistent=false)=>({id,label:id,active:false,interactionDistance:Infinity,persistAcrossTravel:persistent,interact(){return false;},step(){},update(){},reset(){if(persistent)persistentResets++;else ordinaryResets++;},dispose(){}});
+home.add(dummy('ordinary'));home.add(dummy('persistent',true));
 let restX=0,restZ=0;for(let i=0;i<body.mass.length;i++){const w=body.mass[i]/body.totalMass;restX+=body.rest[i*3]*w;restZ+=body.rest[i*3+2]*w;}
 let facingNode=0,facingRadius=-1;for(let i=0;i<body.mass.length;i++){const dx=body.rest[i*3]-restX,dz=body.rest[i*3+2]-restZ,r=dx*dx+dz*dz;if(r>facingRadius){facingRadius=r;facingNode=i;}}
 const restDx=body.rest[facingNode*3]-restX,restDz=body.rest[facingNode*3+2]-restZ;
@@ -35,6 +38,8 @@ assert.equal(moves,0,'passing outside the opening does not teleport');
 place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(.01);
 place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(.01);await waitForTravel();
 assert(worlds.inToys&&worlds.toys.visible&&!worlds.home.visible);
+assert.equal(ordinaryResets,1,'ordinary home facilities reset when leaving through the portal');
+assert.equal(persistentResets,0,'portal-persistent equipment is not reset when leaving its home world');
 assert(!home.enabled&&worlds.toyFacilities.enabled);
 assert(Math.abs(body.center.x-TRACK_PORTAL.x)<1e-8);
 assert(Math.abs(body.center.z-(TRACK_PORTAL.z+PORTAL_ARRIVAL_DISTANCE))<1e-8);
@@ -52,4 +57,4 @@ place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);await waitForTravel();
 assert(worlds.inToys);assert.equal(worlds.tricycle,bike,'later visits reuse geometry');
 bike.physics.speed=.2;worlds.reset();assert.equal(bike.physics.speed,0);assert(worlds.inToys,'reset stays in selected world');
 worlds.dispose();home.dispose();assert.equal(scene.children.length,0);
-console.log('Portal aperture, camera-side arrival and facing, loading, round trip, ownership, arrival cooldown, reuse, reset and disposal passed.');
+console.log('Portal aperture, camera-side arrival and facing, persistent equipment, loading, round trip, ownership, arrival cooldown, reuse, reset and disposal passed.');

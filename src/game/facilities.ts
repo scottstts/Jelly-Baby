@@ -15,6 +15,8 @@ export interface Facility {
   readonly action?:string;
   readonly mobileAction?:string;
   readonly cameraDistance?:number;
+  /** Leave this facility's state untouched when crossing a portal. */
+  readonly persistAcrossTravel?:boolean;
   /** Built-in afterStep methods mutate cage state only through these contacts. */
   readonly collision?:FacilityCollision;
   interact():boolean;
@@ -88,5 +90,6 @@ export class Facilities {
     if(this.button.textContent!==mobileAction)this.button.textContent=mobileAction;
   }
   reset() {for(const item of this.items)item.reset();this.prompt.hidden=true;}
+  resetForTravel() {for(const item of this.items)if(!item.persistAcrossTravel)item.reset();this.prompt.hidden=true;}
   dispose() {this.abort.abort();this.prompt.remove();for(const item of this.items)item.dispose();}
 }
