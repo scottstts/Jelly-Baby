@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Box3 } from 'three/webgpu';
 import { SoccerStadium } from '../src/worlds/soccer/stadium.ts';
-import { FIELD, ENTRANCE, FIELD_RAMP, FIELD_RAMP_SEAM, GOAL, SOCCER_PORTAL, SOCCER_ENVELOPE, WELCOME_DESK } from '../src/worlds/soccer/layout.ts';
+import { FIELD, ENTRANCE, FIELD_RAMP, GOAL, SOCCER_PORTAL, SOCCER_ENVELOPE, WELCOME_DESK } from '../src/worlds/soccer/layout.ts';
 import { MeshData, cleanMesh } from './geometry-quality-kit/procedural-mesh.js';
 import { auditMeshData, auditTriangleSoup } from './geometry-quality-kit/mesh-topology-audit.js';
 import { auditGeometry, logAuditReport } from './geometry-quality-kit/geometry-audit.js';
@@ -10,8 +10,12 @@ import { runGeometryContract, nearCheck, minimumCheck, assertGeometryContract } 
 const stadium=new SoccerStadium(true);let parts=0,triangles=0;
 const namedBounds=name=>{const mesh=stadium.group.getObjectByName(name);assert(mesh,`missing ${name}`);return new Box3().setFromObject(mesh);};
 const ramp=namedBounds('field-access-ramp');
-assert(Math.abs(ramp.min.z-(FIELD_RAMP.start+FIELD_RAMP_SEAM))<1e-6,'ramp threshold owns a non-coplanar field seam');
+assert(Math.abs(ramp.min.z-FIELD_RAMP.start)<1e-6,'ramp meets the field without an exposed trench');
 assert(ramp.max.z<=FIELD_RAMP.end+1e-6,'ramp stays inside the authored access length');
+const rampVertices=stadium.group.getObjectByName('field-access-ramp').geometry.attributes.position,toe=[];
+for(let i=0;i<rampVertices.count;i++)if(Math.abs(rampVertices.getZ(i)-FIELD_RAMP.end)<1e-6)toe.push(rampVertices.getY(i));
+assert(Math.max(...toe)-Math.min(...toe)>.001,'bottom strip has finite thickness instead of coincident tread/underside edges');
+assert(ramp.min.y>0,'ramp underside clears the table surface');
 const sign=namedBounds('entrance-sign-shell');
 assert(sign.min.z>ENTRANCE.z+.043&&sign.max.z<SOCCER_PORTAL.z-.05,'sign belongs between gate and portal');
 assert(Math.abs(sign.max.y-.075)<1e-6,'entrance marker tops out at 7.5 cm');

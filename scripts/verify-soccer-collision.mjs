@@ -35,8 +35,7 @@ place(0,1.79);assert(!walkTo(0,1.61,2).arrived,'back net blocks entry through th
 place(GOAL.width/2,1.43,FIELD.y);assert(!walkTo(GOAL.width/2,1.60,2).arrived,'goal post is a physical obstacle');
 place(0,1.38,FIELD.y);assert(walkTo(0,1.60,3).arrived,'the goal mouth remains open');
 const rampBoxes=stadium.boxes.filter(box=>box.center.x===FIELD_RAMP.x&&box.center.z>FIELD_RAMP.start&&box.center.z<FIELD_RAMP.end);
-assert.equal(rampBoxes.length,12,'ramp keeps twelve thin support contacts');
-assert(rampBoxes.every(box=>box.skipThrowSweep),'ramp support contacts never bulk-stop a grabbed body');
+assert(rampBoxes.length>0&&rampBoxes.every(box=>box.skipThrowSweep),'ramp support contacts exist and never bulk-stop a grabbed body');
 body.reset();
 for(let j=0;j<body.x.length;j+=3){body.x[j]+=FIELD_RAMP.x;body.previous[j]+=FIELD_RAMP.x;body.x[j+2]+=FIELD_RAMP.end+.02;body.previous[j+2]+=FIELD_RAMP.end+.02;}
 body.updateCenter();body.updateSurface();

@@ -2,8 +2,9 @@ import * as T from 'three/webgpu';
 import type Node from 'three/src/nodes/core/Node.js';
 import { float, max, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import { batch, disposeParts, enamel, part } from '../../graphics/shared/toy-parts.ts';
-import { closedTube, moldedBox, solidLoft } from '../../graphics/shared/manufactured-geometry.ts';
-import { FIELD, GOAL, ENTRANCE, FIELD_RAMP, FIELD_RAMP_SEAM, soccerBox } from './layout.ts';
+import { closedTube, moldedBox } from '../../graphics/shared/manufactured-geometry.ts';
+import { FIELD, GOAL, ENTRANCE, PITCH_CONTACT_MARGIN, soccerBox } from './layout.ts';
+import { stadiumRamp } from './ramp.ts';
 import type { CollisionBox } from '../../facilities/collision.ts';
 import { stadiumEntrance } from './entrance.ts';
 import { formedProfile } from './craft.ts';
@@ -30,23 +31,9 @@ export class SoccerStadium {
     };
     // The turf slab is 2 x 3.08 m; markings belong to its material, never stacked coplanar decals.
     this.turf=part(this.group,moldedBox([FIELD.width,.010,FIELD.length],.001),turfMaterial(this.grass),0,.007,0);this.turf.name='two-metre-pitch';
-    const turfBox=soccerBox(0,.007,0,2,.010,3.08);turfBox.skipThrowSweep=true;this.boxes.push(turfBox);
+    const turfBox=soccerBox(0,.007,0,2,.010,3.08);turfBox.skipThrowSweep=true;turfBox.margin=PITCH_CONTACT_MARGIN;this.boxes.push(turfBox);
     addBox('pitch-undertray',[2.035,.001,3.08],0,.0015,0,blue,.0003);
-    // Keep the threshold off the turf/undertray boundary so the rendered ramp
-    // owns no coplanar edge at the field lip.
-    const rampStart=FIELD_RAMP.start+FIELD_RAMP_SEAM,rampLength=FIELD_RAMP.end-rampStart;
-    const rampProfile=[[.001,rampStart],[FIELD.y,rampStart],[.001,FIELD_RAMP.end]];
-    part(this.staticParts,solidLoft([-1,1].map(side=>rampProfile.map(([y,z])=>[FIELD_RAMP.x+side*FIELD_RAMP.width/2,y,z]))),cream).name='field-access-ramp';
-    // Thin tilted tread segments match the visible ramp, avoiding a broad
-    // wedge AABB that would itself form an invisible vertical step.
-    for(let i=0;i<12;i++) {
-      const z=rampStart+(i+.5)/12*rampLength,y=FIELD.y-(z-rampStart)/rampLength*.011,angle=Math.atan(.011/rampLength);
-      const box=soccerBox(FIELD_RAMP.x,y-.0007,z,FIELD_RAMP.width,.0014,rampLength/12+.001);
-      Object.assign(box.yAxis,{x:0,y:Math.cos(angle),z:Math.sin(angle)});Object.assign(box.zAxis,{x:0,y:-Math.sin(angle),z:Math.cos(angle)});box.margin=.00035;this.boxes.push(box);
-      // Dragged bodies use the local contact solver on walkable surfaces. A
-      // swept bulk stop here can pin a grab at the thin threshold boxes.
-      box.skipThrowSweep=true;
-    }
+    stadiumRamp(this.staticParts,this.boxes,cream);
     // Separate end and side banks with authored corner reveals. Lower boarding is continuous except goals/entry.
     for(const side of [-1,1]) {
       addBox(`side-board-${side}`,[.024,.105,3.10],side*1.022,.0645,0,blue,.005,true,true);
