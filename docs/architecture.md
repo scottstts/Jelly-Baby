@@ -133,7 +133,9 @@ one animation frame. It uses the project-wide drawing-buffer policy:
 
 The camera uses a narrow tabletop framing, an adjusted field of view, a small
 vertical view offset on mobile, and a polar-angle limit that keeps the horizon
-out of frame.
+out of frame. Soccer adds a world-owned wall ray test after orbit control
+updates; it constrains the camera radius only when a field boundary would sit
+between the jelly and the camera, then releases back to the saved orbit radius.
 
 ## Cross-system invariants
 

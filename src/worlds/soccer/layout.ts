@@ -12,6 +12,7 @@ export const ENTRANCE={x:.60,z:2.28,width:.34,fieldZ:1.43,concourseStart:1.72} a
 export const SOCCER_PORTAL={x:ENTRANCE.x-.24,z:ENTRANCE.z+.26} as const;
 export const WELCOME_DESK={x:ENTRANCE.x+.31,z:ENTRANCE.z+.115,y:.058} as const;
 export const FIELD_RAMP={x:ENTRANCE.x,width:.30,start:FIELD.length/2,end:FIELD.length/2+.16} as const;
+export const FIELD_RAMP_SEAM=.0015;
 export const SOCCER_ENVELOPE=new Box3(new Vector3(-1.43,0,-2.02),new Vector3(1.43,.50,SOCCER_PORTAL.z+.16));
 
 export function onSoccerField(x:number,z:number) {

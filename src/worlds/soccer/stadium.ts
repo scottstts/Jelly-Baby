@@ -3,7 +3,7 @@ import type Node from 'three/src/nodes/core/Node.js';
 import { float, max, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import { batch, disposeParts, enamel, part } from '../../graphics/shared/toy-parts.ts';
 import { closedTube, moldedBox, solidLoft } from '../../graphics/shared/manufactured-geometry.ts';
-import { FIELD, GOAL, ENTRANCE, FIELD_RAMP, soccerBox } from './layout.ts';
+import { FIELD, GOAL, ENTRANCE, FIELD_RAMP, FIELD_RAMP_SEAM, soccerBox } from './layout.ts';
 import type { CollisionBox } from '../../facilities/collision.ts';
 import { stadiumEntrance } from './entrance.ts';
 import { formedProfile } from './craft.ts';
@@ -14,6 +14,7 @@ import { createFallbackGrassTextures, disposeGrassTextures, turfMaterial, type G
 export class SoccerStadium {
   readonly group=new T.Group();
   readonly boxes:CollisionBox[]=[];
+  readonly cameraObstacles:CollisionBox[]=[];
   readonly staticParts=new T.Group();
   readonly turf:T.Mesh;
   readonly scoreboard=new T.Group();
@@ -23,27 +24,33 @@ export class SoccerStadium {
     this.grass=grass;
     this.group.name='soccer-stadium';this.staticParts.name='stadium-parts';this.staticParts.userData.keepParts=keepParts;this.group.add(this.staticParts);
     const cream=enamel(0xf5e6c5,.33),blue=enamel(0x23559c,.29),seatBlue=enamel(0x4688c8,.4),gold=enamel(0xeabf57,.34),coral=enamel(0xdb6755),net=enamel(0xe9e2cd,.7);
-    const addBox=(name:string,size:number[],x:number,y:number,z:number,material:T.Material=cream,r=.004,collision=false)=>{
+    const addBox=(name:string,size:number[],x:number,y:number,z:number,material:T.Material=cream,r=.004,collision=false,cameraObstacle=false)=>{
       const mesh=part(this.staticParts,moldedBox(size,r),material,x,y,z);mesh.name=name;
-      if(collision)this.boxes.push(soccerBox(x,y,z,...size as [number,number,number]));return mesh;
+      if(collision){const box=soccerBox(x,y,z,...size as [number,number,number]);this.boxes.push(box);if(cameraObstacle)this.cameraObstacles.push(box);}return mesh;
     };
     // The turf slab is 2 x 3.08 m; markings belong to its material, never stacked coplanar decals.
     this.turf=part(this.group,moldedBox([FIELD.width,.010,FIELD.length],.001),turfMaterial(this.grass),0,.007,0);this.turf.name='two-metre-pitch';
     const turfBox=soccerBox(0,.007,0,2,.010,3.08);turfBox.skipThrowSweep=true;this.boxes.push(turfBox);
     addBox('pitch-undertray',[2.035,.001,3.08],0,.0015,0,blue,.0003);
-    const rampProfile=[[.001,FIELD_RAMP.start],[FIELD.y,FIELD_RAMP.start],[.001,FIELD_RAMP.end]];
+    // Keep the threshold off the turf/undertray boundary so the rendered ramp
+    // owns no coplanar edge at the field lip.
+    const rampStart=FIELD_RAMP.start+FIELD_RAMP_SEAM,rampLength=FIELD_RAMP.end-rampStart;
+    const rampProfile=[[.001,rampStart],[FIELD.y,rampStart],[.001,FIELD_RAMP.end]];
     part(this.staticParts,solidLoft([-1,1].map(side=>rampProfile.map(([y,z])=>[FIELD_RAMP.x+side*FIELD_RAMP.width/2,y,z]))),cream).name='field-access-ramp';
     // Thin tilted tread segments match the visible ramp, avoiding a broad
     // wedge AABB that would itself form an invisible vertical step.
     for(let i=0;i<12;i++) {
-      const z=FIELD_RAMP.start+(i+.5)/12*.16,y=FIELD.y-(z-FIELD_RAMP.start)/.16*.011,angle=Math.atan(.011/.16);
-      const box=soccerBox(FIELD_RAMP.x,y-.0007,z,FIELD_RAMP.width,.0014,.16/12+.001);
+      const z=rampStart+(i+.5)/12*rampLength,y=FIELD.y-(z-rampStart)/rampLength*.011,angle=Math.atan(.011/rampLength);
+      const box=soccerBox(FIELD_RAMP.x,y-.0007,z,FIELD_RAMP.width,.0014,rampLength/12+.001);
       Object.assign(box.yAxis,{x:0,y:Math.cos(angle),z:Math.sin(angle)});Object.assign(box.zAxis,{x:0,y:-Math.sin(angle),z:Math.cos(angle)});box.margin=.00035;this.boxes.push(box);
+      // Dragged bodies use the local contact solver on walkable surfaces. A
+      // swept bulk stop here can pin a grab at the thin threshold boxes.
+      box.skipThrowSweep=true;
     }
     // Separate end and side banks with authored corner reveals. Lower boarding is continuous except goals/entry.
     for(const side of [-1,1]) {
-      addBox(`side-board-${side}`,[.024,.105,3.10],side*1.022,.0645,0,blue,.005,true);
-      addBox(`outer-side-${side}`,[.045,.30,ENTRANCE.z+1.915],side*1.393,.151,(ENTRANCE.z-1.835)/2,cream,.009,true);
+      addBox(`side-board-${side}`,[.024,.105,3.10],side*1.022,.0645,0,blue,.005,true,true);
+      addBox(`outer-side-${side}`,[.045,.30,ENTRANCE.z+1.915],side*1.393,.151,(ENTRANCE.z-1.835)/2,cream,.009,true,true);
       for(let row=0;row<4;row++) {
         const inner=1.057+row*.075,outer=inner+.072,y=.049+row*.056;
         // Terraces have owned solid risers, tread and underside: one extruded profile per row.
@@ -62,10 +69,10 @@ export class SoccerStadium {
     }
     for(const end of [-1,1]) {
       const sections=end===-1?[[-1.034,-GOAL.width/2],[GOAL.width/2,1.034]]:[[-1.034,-GOAL.width/2],[GOAL.width/2,ENTRANCE.x-ENTRANCE.width/2],[ENTRANCE.x+ENTRANCE.width/2,1.034]];
-      for(const [index,[a,b]] of sections.entries())addBox(`end-board-${end}-${index}`,[b-a,.105,.024],(a+b)/2,.0645,end*1.562,blue,.004,true);
+      for(const [index,[a,b]] of sections.entries())addBox(`end-board-${end}-${index}`,[b-a,.105,.024],(a+b)/2,.0645,end*1.562,blue,.004,true,true);
       const spans=end===-1?[{x:0,width:2.69}]:[{x:-.4975,width:1.695},{x:1.0975,width:.495}];
       for(const [section,span] of spans.entries()) {
-        addBox(`end-wall-${end}-${section}`,[span.width,.30,.04],span.x,.151,end===1?ENTRANCE.z: -1.90,cream,.008,true);
+        addBox(`end-wall-${end}-${section}`,[span.width,.30,.04],span.x,.151,end===1?ENTRANCE.z: -1.90,cream,.008,true,true);
         for(let row=0;row<3;row++) {
           const z=end*(end===1?ENTRANCE.z-.26+row*.079:1.65+row*.079),y=.052+row*.067;
           // The scoring net occupies the middle of the first two far banks.
@@ -130,13 +137,13 @@ export class SoccerStadium {
     for(let i=1;i<frame.length;i++) {
       const a=new T.Vector3(...frame[i-1]),b=new T.Vector3(...frame[i]),direction=b.clone().sub(a),center=a.clone().add(b).multiplyScalar(.5);
       const box=soccerBox(center.x,center.y,center.z,GOAL.post*2,direction.length()+.001,GOAL.post*2);
-      direction.normalize();Object.assign(box.yAxis,direction);Object.assign(box.xAxis,{x:direction.y,y:-direction.x,z:0});box.margin=.0005;this.boxes.push(box);
+      direction.normalize();Object.assign(box.yAxis,direction);Object.assign(box.xAxis,{x:direction.y,y:-direction.x,z:0});box.margin=.0005;this.boxes.push(box);this.cameraObstacles.push(box);
     }
     this.boxes.push(soccerBox(0,.007,z+end*GOAL.depth/2,GOAL.width+.016,.010,GOAL.depth));
     const rear=z+end*GOAL.depth;
     // Fine mesh holes are too small for the jelly: thin net sheets preserve
     // the open goal mouth without replacing the entire goal with a solid box.
-    for(const box of [soccerBox(0,y+h/2,rear,GOAL.width,h,.0014),soccerBox(-w,y+h/2,(z+rear)/2,.0014,h,GOAL.depth),soccerBox(w,y+h/2,(z+rear)/2,.0014,h,GOAL.depth),soccerBox(0,y+h,(z+rear)/2,GOAL.width,.0014,GOAL.depth)]){box.margin=.0007;this.boxes.push(box);}
+    for(const box of [soccerBox(0,y+h/2,rear,GOAL.width,h,.0014),soccerBox(-w,y+h/2,(z+rear)/2,.0014,h,GOAL.depth),soccerBox(w,y+h/2,(z+rear)/2,.0014,h,GOAL.depth),soccerBox(0,y+h,(z+rear)/2,GOAL.width,.0014,GOAL.depth)]){box.margin=.0007;this.boxes.push(box);this.cameraObstacles.push(box);}
     // A recessed net owns its depth; the nearest strings anchor just behind the front frame.
     for(let i=1;i<28;i++) {
       const x=-w+i*GOAL.width/28;

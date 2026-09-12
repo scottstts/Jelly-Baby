@@ -22,7 +22,6 @@ export class SoccerFacility implements Facility {
   readonly goalie:Baby;
   readonly ball=new Mesh(soccerBallGeometry(),soccerBallMaterial());
   private readonly moving=new Group();
-  private readonly score=document.createElement('div');
   private scoreValue=-1;
   constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows,grass?:GrassTextureSet) {
     this.stadium=new SoccerStadium(false,grass);
@@ -36,7 +35,6 @@ export class SoccerFacility implements Facility {
     scene.add(this.stadium.group,this.moving);
     this.moving.traverse(o=>{if(o instanceof Mesh){o.castShadow=o.receiveShadow=o.receiveCaustics=true;}});
     shadows.add(this.stadium.group,SOCCER_ENVELOPE);shadows.add(this.moving,SOCCER_ENVELOPE);
-    this.score.className='soccer-score';this.score.hidden=true;this.score.setAttribute('role','status');this.score.setAttribute('aria-live','polite');document.querySelector('#app')!.append(this.score);
     this.update();
   }
   get active(){return false;}
@@ -49,10 +47,9 @@ export class SoccerFacility implements Facility {
   warmupCollision(){this.collision.warmupBoxes(this.stadium.boxes);this.goalieContact.warmup();}
   update() {
     const p=this.physics;this.ball.position.copy(p.ball);this.ball.quaternion.copy(p.ballRotation);
-    this.score.hidden=!p.onField;
-    if(this.scoreValue!==p.score){this.scoreValue=p.score;this.score.textContent=`${p.score} ${p.score===1?'goal':'goals'}`;this.stadium.setScore(p.score);}
+    if(this.scoreValue!==p.score){this.scoreValue=p.score;this.stadium.setScore(p.score);}
   }
   updateFrame(dt:number){const body=this.physics.goalie.body;if(body.surfaceDirty)body.updateSurface();this.goalie.update(dt);}
-  reset(){this.physics.reset();this.score.hidden=true;this.goalie.resetFace();this.update();}
-  dispose(){this.collision.dispose();this.goalieContact.dispose();this.stadium.dispose();this.goalie.dispose();this.ball.geometry.dispose();(this.ball.material as ReturnType<typeof soccerBallMaterial>).dispose();this.moving.removeFromParent();this.score.remove();}
+  reset(){this.physics.reset();this.goalie.resetFace();this.update();}
+  dispose(){this.collision.dispose();this.goalieContact.dispose();this.stadium.dispose();this.goalie.dispose();this.ball.geometry.dispose();(this.ball.material as ReturnType<typeof soccerBallMaterial>).dispose();this.moving.removeFromParent();}
 }

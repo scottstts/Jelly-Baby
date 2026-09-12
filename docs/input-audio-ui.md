@@ -11,9 +11,10 @@ Portals open a destination menu. Arrows and Enter belong exclusively to the
 modal until confirmation or cancellation. Space and the touch hop button remain
 the ordinary jump action in every world, including on the Soccer pitch. Soccer
 movement remains the normal camera-relative on-foot control, with a 3× field run
-speed and gait cadence. The camera changes only its pitch on field entry/exit:
-horizontal orbit stays manual and releasing a drag never snaps behind the
-player.
+speed and gait cadence. The camera changes its pitch and preferred distance on
+field entry/exit, and tightens against an occluding field wall when needed.
+Horizontal orbit stays manual and releasing a drag never snaps the camera
+behind the player.
 
 While riding the tricycle, WASD and the touch joystick supply vehicle-relative
 throttle and steering. The movement hint changes to “pedal · steer,” and the
@@ -53,7 +54,11 @@ Pan is disabled, damping is enabled, and distance/polar limits keep the camera
 near the tabletop. Dragging the background is therefore an orbit gesture;
 scroll or pinch changes distance. On Soccer field entry, the camera eases to
 the grazing polar angle and the maximum `.42 m` orbit distance together, then
-restores the captured normal angle and distance when it leaves the field.
+restores the captured normal angle and distance when it leaves the field. While
+the player is on the pitch, the soccer camera traces the authored boundary
+walls before applying that preferred orbit pose. A blocking wall pulls the
+camera toward the body until the wall is behind the camera; the preferred
+distance is retained and restored smoothly once the line of sight is clear.
 
 The camera target follows the body's mass center with exponential smoothing. The
 target is kept above a small floor threshold and the camera's minimum distance

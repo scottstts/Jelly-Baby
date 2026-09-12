@@ -24,13 +24,16 @@ including inside the pitch bounds. Soccer adds no player shooting action; the
 ball, boards, posts, goalkeeper and goal restart continue to run as independent
 physics.
 
-The only soccer-specific camera behavior is pitch. Crossing onto the field
-smoothly lowers the view to a more grazing polar angle and eases the orbit
-distance to the maximum `.42 m` zoom-out at the same time; crossing back off the
-field returns to the captured normal polar angle and distance. Horizontal orbit
-remains manual, there is no player-heading chase, and releasing a drag never
-snaps the camera behind the player. Movement remains relative to the current
-view angle.
+The soccer camera smoothly lowers the view to a more grazing polar angle and
+eases the orbit distance to the maximum `.42 m` zoom-out on field entry;
+crossing back off the field returns to the captured normal polar angle and
+distance. While on the pitch, the camera checks the authored side and end
+boundary walls along the jelly-to-camera ray. If a wall would occlude the jelly,
+the camera squeezes in front of that wall, preserves its preferred orbit
+distance, and restores that distance smoothly when the view clears. Horizontal
+orbit remains manual, there is no player-heading chase, and releasing a drag
+never snaps the camera behind the player. Movement remains relative to the
+current view angle.
 
 The pitch uses the authored four-map grass package in
 [`src/assets/grass_texture`](../src/assets/grass_texture/). Its base, normal,

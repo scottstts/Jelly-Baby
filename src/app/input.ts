@@ -6,8 +6,11 @@ import type { JellySound } from './sound.ts';
 import { surfaceGrab, projectGrabTarget, advanceGrabTarget } from '../physics/grab.ts';
 import { MAX_GRABS } from '../physics/soft-body-kernel.js';
 import { SurfaceBVH } from '../graphics/optics/refractive-light.js';
+import type { CollisionBox } from '../facilities/collision.ts';
 import { TricycleCamera } from '../worlds/toy-track/facilities/tricycle/camera.ts';
 import { SoccerCameraPitch } from '../worlds/soccer/camera.ts';
+
+const EMPTY_COLLISION_BOXES:readonly CollisionBox[]=[];
 
 type PointerGrab={
   grab:NonNullable<ReturnType<typeof surfaceGrab>>;
@@ -29,6 +32,7 @@ export class Input {
   ridingVehicle:()=>boolean=()=>false;
   vehicleHeading:()=>number|undefined=()=>undefined;
   soccerOnField:()=>boolean=()=>false;
+  soccerCameraObstacles:()=>readonly CollisionBox[]=()=>EMPTY_COLLISION_BOXES;
   menuOpen:()=>boolean=()=>false;
   private readonly chase:TricycleCamera;
   private readonly soccerCamera:SoccerCameraPitch;
@@ -302,7 +306,7 @@ export class Input {
     this.camera.position.add(this.temp);this.controls.target.copy(this.follow);
     this.controls.update();
     this.chase.update(this.camera,this.ridingVehicle()?this.vehicleHeading():undefined,dt);
-    this.soccerCamera.update(this.camera,dt);
+    this.soccerCamera.update(this.camera,dt,this.soccerCameraObstacles());
   }
   recenter() {this.clear();this.rig.reset();}
   teleport() {

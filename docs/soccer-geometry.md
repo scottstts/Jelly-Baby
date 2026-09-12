@@ -60,10 +60,14 @@ keep the goal mouth open. Gate-leaf boxes use the actual open yaw. The welcome
 desk has separate top, drawer, shelf and trestle pieces. Soccer adds no equipment
 collider or interaction blocker.
 
-A 16 cm shallow ramp reaches the raised turf. Upward contact marks raised
-surfaces as grounded after collision so ordinary walking and the 3× field run
-retain traction on the ramp, pitch and seating. Side contacts cannot grant
-support. No invisible rectangular player fence surrounds the pitch.
+A 16 cm shallow ramp reaches the raised turf. Its 1.5 mm field-edge seam keeps
+the ramp threshold from sharing coplanar turf and undertray faces. Twelve thin
+sloped support contacts follow the visible ramp; they use local contact
+resolution rather than a swept bulk stop so a grabbed jelly can cross the
+threshold without being pinned. Upward contact marks raised surfaces as
+grounded after collision so ordinary walking and the 3× field run retain
+traction on the ramp, pitch and seating. Side contacts cannot grant support.
+No invisible rectangular player fence surrounds the pitch.
 
 The turf landing volume keeps the local finite-mass contact response for fast
 throws instead of using the structural-piece bulk-throw sweep. Small and high
