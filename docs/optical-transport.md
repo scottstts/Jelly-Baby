@@ -92,6 +92,12 @@ automatically, so current and future ordinary set pieces receive caustics by
 default. The tabletop uses the same receiver layer with its existing
 facility-shadow visibility mask.
 
+Additional jelly bodies use independent instances of the same GPU field and
+worker transport. `CausticReceivers.addSource` attaches their contributions to
+existing and future receivers. Ground receivers share `groundReceiver` for the
+tabletop and elevated floors; it combines each jelly's optical shadow/contact
+field with the existing facility projection, preserving the floor coefficients.
+
 The scene rule is intentionally broad: **every opaque/material surface that could
 plausibly be illuminated by the jelly caustic should receive it**. Exceptions
 should be deliberate optical cases, such as the transmitting jelly itself or

@@ -94,7 +94,7 @@ export class WorldTravel {
     return true;
   }
   onMenuClose:()=>void=()=>{};
-  update(dt:number) {(this.inSoccer?this.soccerPortal:this.inToys?this.returnPortal:this.homePortal)?.update(dt);if(this.inSoccer)this.soccer?.updateFrame(dt);}
+  update(dt:number) {(this.inSoccer?this.soccerPortal:this.inToys?this.returnPortal:this.homePortal)?.update(dt);if(this.inSoccer)this.soccer?.updateFrame(dt);this.soccer?.updateOptics(this.renderer,this.inSoccer);}
   private async travel(destination:WorldId) {
     this.loading=true;this.onMove();
     document.querySelector('#loading')!.classList.remove('hidden');
@@ -117,7 +117,7 @@ export class WorldTravel {
       const {disposeGrassTextures,loadGrassTextures}=await import('./soccer/turf.ts');
       const grass=await loadGrassTextures();
       if(this.disposed){disposeGrassTextures(grass);return;}
-      this.soccer=new SoccerFacility(this.soccerWorld,this.body,this.shadows,grass);this.soccerFacilities.add(this.soccer);
+      this.soccer=new SoccerFacility(this.soccerWorld,this.body,this.shadows,grass,{camera:this.camera,fail:this.fail});this.soccerFacilities.add(this.soccer);
       this.soccerPortal=new JellyPortal(SOCCER_PORTAL.x,SOCCER_PORTAL.z);this.soccerWorld.add(this.soccerPortal.group);this.shadows.add(this.soccerPortal.group,this.soccerPortal.lightingEnvelope);
       this.soccerPortalFacility=new PortalFacility(this.body,'soccer-portal-housing',SOCCER_PORTAL.x,SOCCER_PORTAL.z,this.soccerPortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
       this.soccerFacilities.add(this.soccerPortalFacility);this.soccerFacilities.warmupCollisions();
@@ -131,6 +131,7 @@ export class WorldTravel {
     // body before the hidden first render and GPU warmup.
     this.homeFacilities.update();this.toyFacilities.update();this.soccerFacilities.update();
     await this.onReady();this.stage('Settling into the little world');
+    this.soccer?.updateFrame(0);this.soccer?.updateOptics(this.renderer,this.inSoccer);
     const shadowRevision=this.shadows.update(this.renderer);
     this.shadows.surfaces.update(this.renderer,shadowRevision);
     await warmMainScenePipelines(this.renderer,this.scene,this.camera);

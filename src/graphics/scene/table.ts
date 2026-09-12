@@ -1,10 +1,10 @@
 import * as THREE from 'three/webgpu';
-import { texture, positionWorld, float, vec2, vec3, normalMap, uniform } from 'three/tsl';
+import { texture, positionWorld, vec2, normalMap, uniform } from 'three/tsl';
 import type { RefractiveLightField } from '../optics/refractive-light.js';
 import type { CausticReceivers } from '../optics/caustic-receivers.ts';
 import type { FacilityShadows } from '../../facilities/shadows.ts';
 
-export async function makeTable(optics:RefractiveLightField,light:{color:THREE.Color;windowFraction:number;irradiance:number},facilities:FacilityShadows,caustics:CausticReceivers) {
+export async function makeTable(_optics:RefractiveLightField,light:{color:THREE.Color;windowFraction:number;irradiance:number},facilities:FacilityShadows,caustics:CausticReceivers) {
   const fraction=uniform(light.windowFraction);
   const loader=new THREE.TextureLoader();
   const urls=[new URL('../../assets/wood_texture/wood_base.jpg',import.meta.url).href,
@@ -14,26 +14,8 @@ export async function makeTable(optics:RefractiveLightField,light:{color:THREE.C
   base.colorSpace=THREE.SRGBColorSpace;
   for(const t of [base,normal,roughness]) {t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;}
   const uv=positionWorld.xz.div(2.5).add(.5);
-  const shadowUV=positionWorld.xz.sub(optics.shadowOriginNode).div(optics.shadowSpanNode);
-  const shadowInside=float(shadowUV.x.greaterThan(0).and(shadowUV.x.lessThan(1)).and(shadowUV.y.greaterThan(0)).and(shadowUV.y.lessThan(1)));
-  const shadow=texture(optics.shadowTexture,shadowUV).r.mul(shadowInside);
-  const contactUV=positionWorld.xz.sub(optics.contactOriginNode).div(optics.shadowSpanNode);
-  const contactInside=float(contactUV.x.greaterThan(0).and(contactUV.x.lessThan(1)).and(contactUV.y.greaterThan(0)).and(contactUV.y.lessThan(1)));
-  const contact=texture(optics.shadowTexture,contactUV).g.mul(contactInside);
   const albedo=texture(base,uv).rgb;
   const material=new THREE.MeshPhysicalNodeMaterial({metalness:0,roughness:.26,clearcoat:.38,clearcoatRoughness:.23});
-  const facilityUV=facilities.worldToUVNode.mul(vec3(positionWorld.xz,1)).xy;
-  const facilityInside=float(facilityUV.x.greaterThan(0).and(facilityUV.x.lessThan(1)).and(facilityUV.y.greaterThan(0)).and(facilityUV.y.lessThan(1)));
-  // A deterministic tent filter softens the finite window's occlusion. No
-  // temporal noise, transparent sorting, or nearly coplanar depth comparisons.
-  let facilityMask=vec2(0,0).add(0);
-  for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++) {
-    const weight=(x===0?2:1)*(y===0?2:1)/16;
-    facilityMask=facilityMask.add(texture(facilities.target.texture,facilityUV.add(vec2(x,y).mul(facilities.shadowTexelNode).mul(1.5))).rg.mul(weight));
-  }
-  const facilityShadow=facilityMask.x.mul(facilityInside),facilityContact=facilityMask.y.mul(facilityInside);
-  const visibility=float(1).sub(shadow).mul(float(1).sub(facilityShadow));
-  material.colorNode=albedo.mul(float(1).sub(float(1).sub(visibility).mul(fraction))).mul(float(1).sub(contact.mul(.40))).mul(float(1).sub(facilityContact.mul(.35)));
   // Plane UV-v points toward -Z; the metre-scaled world UV points toward +Z.
   material.normalNode=normalMap(texture(normal,uv),vec2(.27,-.27));
   material.roughnessNode=texture(roughness,uv).r.mul(.30).add(.12);
@@ -41,6 +23,6 @@ export async function makeTable(optics:RefractiveLightField,light:{color:THREE.C
   mesh.rotation.x=-Math.PI/2;mesh.position.y=-.00005;mesh.receiveCaustics=true;
   // Keep the table's established facility-shadow mask while moving the actual
   // caustic sampling into the same reusable receiver path as scene objects.
-  caustics.register(mesh,{albedo,visibility:float(1).sub(facilityShadow)});
+  caustics.registerGround(mesh,albedo,facilities,fraction);
   return {mesh,setLighting:(light:{windowFraction:number})=>{fraction.value=light.windowFraction;},dispose:()=>{mesh.geometry.dispose();material.dispose();[base,normal,roughness].forEach(t=>t.dispose());}};
 }

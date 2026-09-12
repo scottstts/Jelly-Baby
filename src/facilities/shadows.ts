@@ -29,22 +29,27 @@ export class FacilityShadows {
   private targetDirty=true;
   private readonly envelopes:{group:THREE.Group;bounds:THREE.Box3;visible:boolean}[]=[];
   private referenceSpan:THREE.Vector2|undefined;
+  private readonly receiverFields=new Map<number,FacilityShadows>();
+  private readonly receiverHeight:number;
   private visible(group:THREE.Object3D) {
     for(let object:THREE.Object3D|null=group;object;object=object.parent)if(!object.visible)return false;
     return true;
   }
-  constructor(incoming:THREE.Vector3,windowFraction:number,caustics?:CausticReceivers) {
+  constructor(incoming:THREE.Vector3,windowFraction:number,caustics?:CausticReceivers,receiverHeight=-.00005) {
+    this.receiverHeight=receiverHeight;
     this.caustics=caustics;
     if(incoming.y>=-.01)throw new Error('Facility shadows require a downward light direction');
     this.surfaces=new SurfaceShadows(incoming,windowFraction);
-    const x=incoming.x/incoming.y,z=incoming.z/incoming.y,floor=-.00005;
+    const x=incoming.x/incoming.y,z=incoming.z/incoming.y,floor=receiverHeight;
     // Project onto the tabletop along incoming light, then put world X/Z in
     // shadow-camera X/Y. Fixed bounds avoid camera-following texel shimmer.
-    this.projection.set(1,-x,0,x*floor,0,-z,1,z*floor,0,0,0,0,0,0,0,1);
+    this.projection.set(1,-x,0,x*floor,0,-z,1,z*floor,0,receiverHeight>0?1:0,0,0,0,0,0,1);
+    if(receiverHeight>0)this.material.colorNode=vec3(float(positionWorld.z.greaterThan(receiverHeight+.001)),0,0);
     // R: directional window occlusion. G: near-floor ambient contact. MAX
     // blending unions each channel so the mat cannot erase leg/foot shadows.
     // Contact projection preserves original height in Z for the falloff shader.
-    this.contactMaterial.colorNode=vec3(0,float(1).sub(positionWorld.z.smoothstep(.001,.025)),0);
+    const contact=float(1).sub(positionWorld.z.sub(Math.max(0,receiverHeight)).smoothstep(.001,.025));
+    this.contactMaterial.colorNode=vec3(0,receiverHeight>0?contact.mul(float(positionWorld.z.greaterThan(receiverHeight+.001))):contact,0);
     this.scene.background=new THREE.Color(0x000000);
     this.camera.position.z=1;this.camera.updateMatrixWorld();
     this.target.texture.colorSpace=THREE.NoColorSpace;
@@ -53,12 +58,14 @@ export class FacilityShadows {
   }
   /** Bounds must include the facility's entire motion envelope, in world metres. */
   add(group:THREE.Group,envelope:THREE.Box3) {
-    this.surfaces.add(group,envelope);
+    if(this.receiverHeight<0)this.surfaces.add(group,envelope);
+    for(const field of this.receiverFields.values())field.add(group,envelope);
     this.envelopes.push({group,bounds:envelope.clone(),visible:this.visible(group)});this.fitBounds();
     group.traverse(object=>{
       if(!(object instanceof THREE.Mesh))return;
-      if(object.receiveCaustics!==false)object.receiveCaustics=true;
+      if(this.receiverHeight<0&&object.receiveCaustics!==false)object.receiveCaustics=true;
       this.caustics?.register(object);
+      if(object.userData.opticalShadowCaster)return;
       const shadow=new THREE.Mesh(object.geometry,this.material);
       shadow.matrixAutoUpdate=false;shadow.frustumCulled=false;this.scene.add(shadow);
       const contact=new THREE.Mesh(object.geometry,this.contactMaterial);
@@ -67,10 +74,22 @@ export class FacilityShadows {
     });
     this.targetDirty=true;
   }
+  /** Reuse the floor projection at another horizontal receiver's elevation. */
+  atHeight(height:number,incoming:THREE.Vector3,windowFraction:number) {
+    let field=this.receiverFields.get(height);
+    if(!field){
+      field=new FacilityShadows(incoming,windowFraction,undefined,height);
+      field.referenceSpan=this.referenceSpan?.clone();
+      for(const item of this.envelopes)field.add(item.group,item.bounds);
+      this.receiverFields.set(height,field);
+    }
+    return field;
+  }
   setLighting(incoming:THREE.Vector3,windowFraction:number) {
     if(incoming.y>=-.01)throw new Error('Facility shadows require a downward light direction');
-    const x=incoming.x/incoming.y,z=incoming.z/incoming.y,floor=-.00005;
-    this.projection.set(1,-x,0,x*floor,0,-z,1,z*floor,0,0,0,0,0,0,0,1);
+    const x=incoming.x/incoming.y,z=incoming.z/incoming.y,floor=this.receiverHeight;
+    this.projection.set(1,-x,0,x*floor,0,-z,1,z*floor,0,this.receiverHeight>0?1:0,0,0,0,0,0,1);
+    for(const field of this.receiverFields.values())field.setLighting(incoming,windowFraction);
     this.surfaces.setLighting(incoming,windowFraction);
     this.fitBounds();this.targetDirty=true;
   }
@@ -112,6 +131,7 @@ export class FacilityShadows {
     for(const item of this.envelopes){const visible=this.visible(item.group);if(visible!==item.visible){item.visible=visible;changedWorld=true;}}
     if(changedWorld){this.fitBounds();this.targetDirty=true;}
     const worldSyncRevision=this.surfaces.syncWorldMatrices();
+    for(const field of this.receiverFields.values())field.update(renderer);
     for(const caster of this.casters) {
       const position=caster.source.geometry.attributes.position;
       const positionVersion=position instanceof THREE.InterleavedBufferAttribute?position.data.version:position.version;
@@ -137,5 +157,5 @@ export class FacilityShadows {
     } finally {renderer.setRenderTarget(previous);renderer.autoClear=autoClear;}
     return worldSyncRevision;
   }
-  dispose() {this.surfaces.dispose();this.scene.clear();this.casters.length=0;this.material.dispose();this.contactMaterial.dispose();this.target.dispose();}
+  dispose() {for(const field of this.receiverFields.values())field.dispose();this.receiverFields.clear();this.surfaces.dispose();this.scene.clear();this.casters.length=0;this.material.dispose();this.contactMaterial.dispose();this.target.dispose();}
 }

@@ -162,6 +162,7 @@ export class SurfaceShadows {
       this.receiverDepths.push({source,proxy:receiverProxy,scene:receiverScene,target:receiverTarget,dirty:true});
     }
     for(const material of Array.isArray(source.material)?source.material:[source.material]) {
+      if(source.userData.groundReceiver)continue;
       if(!(material instanceof THREE.NodeMaterial)||this.receivers.has(material))continue;
       this.receivers.add(material);
       let visibility=this.occlusion(this.facilityTarget,receiverTarget).oneMinus();
@@ -174,6 +175,8 @@ export class SurfaceShadows {
       material.needsUpdate=true;
     }
   }
+
+  get fractionNode(){return this.windowFraction;}
 
   update(renderer:THREE.WebGPURenderer,syncedRevision=-1) {
     if(syncedRevision!==this.worldSyncRevision)this.syncWorldMatrices();

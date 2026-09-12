@@ -2,6 +2,8 @@ import * as THREE from 'three/webgpu';
 import { float, normalWorldGeometry, positionWorld, texture, uniform, vec3 } from 'three/tsl';
 import type Node from 'three/src/nodes/core/Node.js';
 import type { RefractiveLightField } from './refractive-light.js';
+import type { FacilityShadows } from '../../facilities/shadows.ts';
+import { groundReceiver } from '../scene/ground-receiver.ts';
 
 export type CausticLighting={color:THREE.Color;irradiance:number};
 type ReceiverOptions={albedo?:Node<'vec3'>;visibility?:Node<'float'>};
@@ -11,8 +13,12 @@ type CausticMaterial=THREE.MeshStandardNodeMaterial|THREE.MeshPhysicalNodeMateri
 export class CausticReceivers {
   readonly irradianceNode=uniform(0);
   readonly colorNode=uniform(new THREE.Color());
-  private readonly optics:RefractiveLightField;
+  readonly optics:RefractiveLightField;
   private readonly materials=new Set<THREE.Material>();
+  private readonly meshes=new Map<THREE.Mesh,ReceiverOptions>();
+  private readonly sources:CausticReceivers[]=[];
+  readonly enabledNode=uniform(1);
+  private readonly grounds:{mesh:THREE.Mesh;albedo:Node<'vec3'>;facilities:FacilityShadows;fraction:Node<'float'>;height:number}[]=[];
 
   constructor(optics:RefractiveLightField,light:CausticLighting) {
     this.optics=optics;this.setLighting(light);
@@ -26,7 +32,29 @@ export class CausticReceivers {
   /** Register one mesh after setting `mesh.receiveCaustics = true`. */
   register(mesh:THREE.Mesh,options:ReceiverOptions={}) {
     if(!mesh.receiveCaustics)return;
+    if(!this.meshes.has(mesh))this.meshes.set(mesh,options);
     for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material])this.registerMaterial(material,options);
+    for(const source of this.sources)source.register(mesh,options);
+  }
+
+  addSource(optics:RefractiveLightField) {
+    const source=new CausticReceivers(optics,{color:this.colorNode.value,irradiance:this.irradianceNode.value*Math.PI});
+    for(const [mesh,options] of this.meshes)source.register(mesh,options);
+    this.sources.push(source);
+    for(const ground of this.grounds)this.bindGround(ground);
+    return source;
+  }
+
+  registerGround(mesh:THREE.Mesh,albedo:Node<'vec3'>,facilities:FacilityShadows,fraction:Node<'float'>,height=0) {
+    const ground={mesh,albedo,facilities,fraction,height};this.grounds.push(ground);
+    const visibility=this.bindGround(ground);
+    mesh.receiveCaustics=true;this.register(mesh,{albedo,visibility});
+  }
+
+  private bindGround(ground:typeof this.grounds[number]) {
+    const result=groundReceiver(ground.albedo,this.optics,ground.facilities,ground.fraction,ground.height,this.sources);
+    const material=ground.mesh.material as THREE.MeshPhysicalNodeMaterial;
+    material.colorNode=result.color;material.needsUpdate=true;return result.visibility;
   }
 
   private registerMaterial(material:THREE.Material,options:ReceiverOptions) {
@@ -59,7 +87,7 @@ export class CausticReceivers {
     const horizontalFacing=lightDirection.y.abs().max(1e-4);
     const surfaceFacing=normalWorldGeometry.dot(lightDirection.negate()).max(0);
     const incidence=surfaceFacing.div(horizontalFacing).clamp(0,1);
-    const strength=this.irradianceNode.mul(inside).mul(visibility).mul(incidence);
+    const strength=this.irradianceNode.mul(this.enabledNode).mul(inside).mul(visibility).mul(incidence);
     // Keep RGB products component-wise. @types/three's fluent mul overloads
     // are scalar-biased for vec3 nodes even though TSL supports vec3*vec3.
     const caustic=vec3(
@@ -74,7 +102,8 @@ export class CausticReceivers {
 
   setLighting(light:CausticLighting) {
     this.irradianceNode.value=light.irradiance/Math.PI;this.colorNode.value.copy(light.color);
+    for(const source of this.sources)source.setLighting(light);
   }
 
-  dispose(){this.materials.clear();}
+  dispose(){for(const source of this.sources)source.dispose();this.sources.length=0;this.grounds.length=0;this.meshes.clear();this.materials.clear();}
 }

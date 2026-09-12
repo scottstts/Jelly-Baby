@@ -45,6 +45,16 @@ vertex-height offset and fine bump detail; no procedural sprout mesh is needed.
 Paint belongs to the same turf material as the base texture rather than
 coplanar decals, and the slab receives shared shadows and jelly caustics.
 
+The turf registers with the same ground receiver used by the tabletop. Facility
+occlusion reuses the floor projection at pitch height, excluding geometry below
+the receiver so the slab cannot shadow itself. Both jellies use the same optical
+shadow/contact sampling, coefficients, and facility tent filter. The goalie runs
+the player's `RefractiveLightField` and `OpticalTransport`, with blueberry
+absorption and the player's current measured light direction. Its contribution
+is disabled outside Soccer. Like the player, the transmitting goalie mesh and
+its face are excluded from the opaque caustic receiver layer; its caustics land
+on the pitch and other scene surfaces rather than being projected onto itself.
+
 The quality gate uses 25 micrometres of plane tolerance, 0.02 square millimetres
 of clipped-overlap area, and a 1.5 mm solid-clash depth setting. Topology rejects
 open solids, inverted components, invalid normals and degenerate faces. Four

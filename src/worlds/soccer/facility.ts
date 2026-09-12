@@ -1,4 +1,4 @@
-import { Group, Mesh, type Scene } from 'three/webgpu';
+import { Group, Mesh, type Scene, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
 import type { SoftBody } from '../../physics/soft-body.js';
 import type { Facility } from '../../facilities/manager.ts';
 import { FacilityCollision } from '../../facilities/collision.ts';
@@ -11,6 +11,7 @@ import { GoalieContact } from './goalie-contact.ts';
 import { StadiumCollisionGrid } from './collision-grid.ts';
 import { markStadiumSupport } from './walking-support.ts';
 import type { GrassTextureSet } from './turf.ts';
+import { SoccerLighting } from './lighting.ts';
 
 export class SoccerFacility implements Facility {
   readonly id='soccer';readonly label='Soccer';
@@ -23,7 +24,8 @@ export class SoccerFacility implements Facility {
   readonly ball=new Mesh(soccerBallGeometry(),soccerBallMaterial());
   private readonly moving=new Group();
   private scoreValue=-1;
-  constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows,grass?:GrassTextureSet) {
+  private readonly lighting:SoccerLighting|undefined;
+  constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows,grass?:GrassTextureSet,opticalContext?:{camera:PerspectiveCamera;fail:(error:Error)=>void}) {
     this.stadium=new SoccerStadium(false,grass);
     this.physics=new SoccerPhysics(body);this.goalie=new Baby(this.physics.goalie.body);this.goalie.setFlavor('blueberry');
     // FaceSkin binds in the original local rest frame, then follows the placed cage.
@@ -33,7 +35,16 @@ export class SoccerFacility implements Facility {
     this.goalieContact=new GoalieContact(body,this.physics.goalie);
     this.moving.name='soccer-players-and-ball';this.ball.name='soccer-ball';this.moving.add(this.goalie.group,this.ball);
     scene.add(this.stadium.group,this.moving);
-    this.moving.traverse(o=>{if(o instanceof Mesh){o.castShadow=o.receiveShadow=o.receiveCaustics=true;}});
+    this.moving.traverse(o=>{if(o instanceof Mesh){o.castShadow=o.receiveShadow=true;}});
+    // Match the player exactly: transmitting jelly and its face do not receive
+    // the projected receiver caustic. The separate optical field below makes
+    // the goalie cast caustics onto opaque scene surfaces.
+    this.goalie.group.traverse(o=>{if(o instanceof Mesh)o.receiveCaustics=false;});
+    this.ball.receiveCaustics=true;
+    if(shadows.caustics&&opticalContext){
+      this.goalie.mesh.userData.opticalShadowCaster=true;
+      this.lighting=new SoccerLighting(this.stadium.turf,this.physics.goalie.body,shadows,shadows.caustics,opticalContext.camera,opticalContext.fail);
+    }
     shadows.add(this.stadium.group,SOCCER_ENVELOPE);shadows.add(this.moving,SOCCER_ENVELOPE);
     this.update();
   }
@@ -50,6 +61,7 @@ export class SoccerFacility implements Facility {
     if(this.scoreValue!==p.score){this.scoreValue=p.score;this.stadium.setScore(p.score);}
   }
   updateFrame(dt:number){const body=this.physics.goalie.body;if(body.surfaceDirty)body.updateSurface();this.goalie.update(dt);}
+  updateOptics(renderer:WebGPURenderer,active:boolean){this.lighting?.update(renderer,active);}
   reset(){this.physics.reset();this.goalie.resetFace();this.update();}
-  dispose(){this.collision.dispose();this.goalieContact.dispose();this.stadium.dispose();this.goalie.dispose();this.ball.geometry.dispose();(this.ball.material as ReturnType<typeof soccerBallMaterial>).dispose();this.moving.removeFromParent();}
+  dispose(){this.lighting?.dispose();this.collision.dispose();this.goalieContact.dispose();this.stadium.dispose();this.goalie.dispose();this.ball.geometry.dispose();(this.ball.material as ReturnType<typeof soccerBallMaterial>).dispose();this.moving.removeFromParent();}
 }
