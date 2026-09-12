@@ -8,12 +8,12 @@ release.
 ## Browser shell and interface
 
 Portals open a destination menu. Arrows and Enter belong exclusively to the
-modal until confirmation or cancellation. In Soccer, the touch jump button
-becomes Shoot and Space runs the shot action. Leaving skates restores the hop
-caption. Soccer uses forward/reverse throttle and left/right steering, with a
-motion-gated rolling turn and an in-place duck-like pivot hop when stationary.
-It keeps the lower chase angle and the same drag/release return behavior as the
-tricycle.
+modal until confirmation or cancellation. In Soccer, Space and the touch hop
+button become Shoot only while the baby is inside the pitch bounds; stepping off
+the pitch restores the ordinary jump action. Soccer movement remains the normal
+camera-relative on-foot control, with a 3× field run speed and gait cadence. The
+camera changes only its pitch on field entry/exit: horizontal orbit stays manual
+and releasing a drag never snaps behind the player.
 
 While riding the tricycle, WASD and the touch joystick supply vehicle-relative
 throttle and steering. The movement hint changes to “pedal · steer,” and the
@@ -165,6 +165,12 @@ new impact; sustained obstacle contact is held as one contact so it cannot retri
 at the 240 Hz physics rate. Landing on a raised toy-track curb feeds its downward
 impact into the same body-contact debounce, so it sounds like an ordinary floor
 landing rather than a separate facility effect.
+
+Soccer adds a field-only procedural artificial-turf run layer. It combines a dry
+short-fiber brush with soft footfall pulses, follows measured player speed, and
+uses the same distance attenuation and stereo panning as other positional audio.
+The layer stops immediately off the pitch and shares the normal mute, reset,
+travel, hidden-tab and disposal lifecycle.
 
 A moving tricycle adds one deliberately quiet continuous procedural rolling
 texture. It begins only above a small motion threshold, follows absolute vehicle

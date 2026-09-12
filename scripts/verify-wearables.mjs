@@ -117,16 +117,6 @@ assert(carried.interact(),'carried attire can be taken off with the shared inter
 assert.equal(facility.physics.wornIndex,null);
 assert.equal(facility.visual.items[2].root.parent,facility.visual.group,'toy-world take-off reparents the cap to the hidden dressing table');
 assert.equal(facility.visual.items[2].root.position.x,HEAD_WEARABLES[2].slotX,'carried cap returns to its original dressing-table slot');
-// Skate support is above the tabletop, so body.grounded is intentionally false.
-// All three hats must remain removable through the carried facility there.
-for(const index of [0,1,2]) {
-  moveBody(body,WEARABLE_TABLE.x+HEAD_WEARABLES[index].slotX,WEARABLE_TABLE.z);assert(facility.interact());
-  moveBody(body,0,1.35);body.grounded=false;
-  const skating=new CarriedWearableFacility(facility,()=>true);skating.update();
-  assert.equal(facility.physics.wornIndex,index);assert(Number.isFinite(skating.interactionDistance));assert(skating.interact());
-  assert.equal(facility.physics.wornIndex,null);assert.equal(facility.visual.items[index].root.parent,facility.visual.group);
-}
-
 const collisionBody=new SoftBody(loadModel()),collisionRig=new Locomotion(collisionBody);
 const collisionFacility=new WearableFacility(new Scene(),collisionBody,new Group(),collisionRig,{add(){}});
 const frontLeg=collisionFacility.visual.collisionBoxes[1];

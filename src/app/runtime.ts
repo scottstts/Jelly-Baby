@@ -25,6 +25,7 @@ import { TrampolineFacility } from '../worlds/main/facilities/trampoline/facilit
 import { CarriedWearableFacility, WearableFacility } from '../worlds/main/facilities/wearable/facility.ts';
 import { warmMainScenePipelines } from '../graphics/scene/render-warmup.ts';
 import { WorldTravel } from '../worlds/travel.ts';
+import { SOCCER_RUN_CADENCE_SCALE, SOCCER_RUN_SPEED_SCALE } from '../worlds/soccer/layout.ts';
 
 export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   stage('Starting WebGPU');
@@ -56,7 +57,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   rig.onJump=()=>wearableTable.jumpFromNormalLocomotion();
   facilities.add(wearableTable);
   worlds.toyFacilities.add(new CarriedWearableFacility(wearableTable));
-  worlds.soccerFacilities.add(new CarriedWearableFacility(wearableTable,()=>worlds.soccer?.active??false));
+  worlds.soccerFacilities.add(new CarriedWearableFacility(wearableTable));
   facilities.add(new SwingFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(new TrampolineFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(bed);
@@ -70,13 +71,12 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound);
   input.bodyControlled=()=>worlds.loading||worlds.menu.opened||!!worlds.facilities.active;
   input.menuOpen=()=>worlds.menu.opened;
-  input.soccerActive=()=>worlds.inSoccer&&(worlds.soccer?.active??false);
-  input.soccerInput=(throttle,steer)=>{if(worlds.inSoccer&&worlds.soccer?.active)worlds.soccer.physics.player.setInput(throttle,steer);};
-  input.shoot=()=>{if(worlds.inSoccer)worlds.soccer?.physics.shoot();};
+  input.soccerOnField=()=>worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
+  input.shoot=()=>{if(worlds.inSoccer)worlds.soccer?.physics.shoot(rig.yaw);};
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
   input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};
   input.ridingVehicle=()=>worlds.inToys&&(worlds.tricycle?.physics.riding??false);
-  input.vehicleHeading=()=>input.soccerActive()?worlds.soccer?.physics.player.yaw:worlds.tricycle?.physics.yaw;
+  input.vehicleHeading=()=>worlds.tricycle?.physics.yaw;
   facilities.onInteract=()=>{input.clear();rig.reset();void sound.unlock().catch(()=>{});};
   worlds.toyFacilities.onInteract=facilities.onInteract;
   worlds.soccerFacilities.onInteract=facilities.onInteract;
@@ -89,7 +89,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
       worlds.tricycle.onWalkCurbImpact=speed=>rig.surfaceImpact(speed);
     }
-    if(worlds.soccer){worlds.soccer.onPlacement=()=>{input.teleport();rig.yaw=worlds.soccer!.physics.player.yaw;};worlds.soccer.physics.onEvent=(kind,strength,p)=>sound.soccerEvent(kind,strength,p);}
+    if(worlds.soccer)worlds.soccer.physics.onEvent=(kind,strength,p)=>sound.soccerEvent(kind,strength,p);
     baby.update();optics.update(renderer,body,true);transport.follow();await transport.update();
   };
   const transport=new OpticalTransport(optics,body,camera,environment.incoming,fail);
@@ -140,6 +140,8 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       const steps=physicsClock.advance(dt,()=>{
         if(worlds.loading)return;
         const current=worlds.facilities;
+        const soccerField=worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
+        rig.speedScale=soccerField?SOCCER_RUN_SPEED_SCALE:1;rig.cadenceScale=soccerField?SOCCER_RUN_CADENCE_SCALE:1;
         input.step(PHYS.step);current.step(PHYS.step);
         if(!current.active)rig.step(PHYS.step);
         body.step(PHYS.step);wearableTable.syncBedOccupancy(bed.active);current.afterStep();input.afterPhysicsStep();
@@ -160,7 +162,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       const tricycle=worlds.inToys?worlds.tricycle?.physics:undefined;
       if(tricycle)sound.tricycleMotion(tricycle.riding?tricycle.rollingSpeed:0,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
       const soccer=worlds.inSoccer?worlds.soccer?.physics:undefined;
-      if(soccer)sound.soccerMotion(soccer.riding?soccer.player.velocity.length():0,body.center);
+      if(soccer)sound.soccerMotion(soccer.onField&&rig.grounded&&rig.move.lengthSq()>.01?Math.hypot(rig.velocity.x,rig.velocity.z):0,body.center);
       transport.follow();
       optics.update(renderer,body);
       table.mesh.position.x=body.center.x;table.mesh.position.z=body.center.z;

@@ -8,6 +8,8 @@ export class Locomotion {
   readonly center=new Vector3();
   yaw=0;
   phase=0;
+  speedScale=1;
+  cadenceScale=1;
   private gaitWeight=0;
   grounded=false;
   private jumpQueued=false;
@@ -31,7 +33,7 @@ export class Locomotion {
     for(let i=0;i<body.mass.length;i++) this.restCenter.addScaledVector(new Vector3().fromArray(body.rest,i*3),body.mass[i]/body.totalMass);
   }
   jump() { this.jumpQueued=true; }
-  reset() { this.yaw=0; this.phase=0;this.gaitWeight=0;this.jumpCooldown=0; this.jumpQueued=false; this.move.set(0,0,0); }
+  reset() { this.yaw=0; this.phase=0;this.speedScale=1;this.cadenceScale=1;this.gaitWeight=0;this.jumpCooldown=0; this.jumpQueued=false; this.move.set(0,0,0); }
   step(h:number) {
     const b=this.body, x=b.x, v=b.velocity;
     this.elapsed+=h; this.jumpCooldown-=h;
@@ -56,11 +58,12 @@ export class Locomotion {
     }
     this.gaitWeight+=(Math.min(1,speed)-this.gaitWeight)*(1-Math.exp(-12*h));
     if(this.gaitWeight<1e-5)this.gaitWeight=0;
-    if(speed>.001&&this.grounded)this.phase+=h*Math.max(.25,Math.min(1,Math.hypot(this.velocity.x,this.velocity.z)/.10))*14;
+    if(speed>.001&&this.grounded)this.phase+=h*Math.max(.25,Math.min(1,Math.hypot(this.velocity.x,this.velocity.z)/(.10*this.speedScale)))*14*this.cadenceScale;
     const co=Math.cos(this.yaw),si=Math.sin(this.yaw);
     const drive=this.grounded?1:.08;
-    const ax=(this.move.x*.145-this.velocity.x)*48*drive*recovery;
-    const az=(this.move.z*.145-this.velocity.z)*48*drive*recovery;
+    const targetSpeed=.145*this.speedScale;
+    const ax=(this.move.x*targetSpeed-this.velocity.x)*48*drive*recovery;
+    const az=(this.move.z*targetSpeed-this.velocity.z)*48*drive*recovery;
     const muscle=(this.grounded?1:.22)*recovery;
     for(let i=0;i<b.mass.length;i++) {
       const j=i*3;

@@ -2,7 +2,7 @@ import { CatmullRomCurve3, Group, Vector3, type Material } from 'three/webgpu';
 import { part } from '../../graphics/shared/toy-parts.ts';
 import { closedTube, moldedBox, solidLoft, turned } from '../../graphics/shared/manufactured-geometry.ts';
 import type { CollisionBox } from '../../facilities/collision.ts';
-import { ENTRANCE, RENTAL, soccerBox } from './layout.ts';
+import { ENTRANCE, WELCOME_DESK, soccerBox } from './layout.ts';
 import { formedProfile } from './craft.ts';
 
 export function stadiumEntrance(root:Group,boxes:CollisionBox[],cream:Material,blue:Material,gold:Material,coral:Material) {
@@ -41,18 +41,18 @@ export function stadiumEntrance(root:Group,boxes:CollisionBox[],cream:Material,b
   const crest=[[-.018,0],[-.016,.012],[.016,.012],[.018,0],[.011,-.012],[0,-.018],[-.011,-.012]];
   const badge=part(root,solidLoft([-.002,.002].map(z=>crest.map(([x,y])=>[x,y,z]))),gold,entryX,.303,entryZ+.045);badge.name='entry-crest';
   add('entry-crest-inset',[.019,.012,.0015],entryX,.305,entryZ+.04775,blue,.002);
-  // Trestle rental desk: two pierced, bevelled side frames, a low shelf, a
-  // recessed drawer and a turned handle. No shoe-shaped boots or spindly legs.
-  add('rental-top',[.14,.009,.083],RENTAL.x,RENTAL.y-.0045,RENTAL.z,coral,.004);
+  // Trestle welcome desk: two pierced, bevelled side frames, a low shelf, a
+  // recessed drawer and a turned handle.
+  add('welcome-top',[.14,.009,.083],WELCOME_DESK.x,WELCOME_DESK.y-.0045,WELCOME_DESK.z,coral,.004);
   const profile=[[-.037,.002],[-.029,.042],[-.023,.049],[.023,.049],[.029,.042],[.037,.002],[.025,.002],[.018,.036],[-.018,.036],[-.025,.002]];
-  for(const side of [-1,1]) {const frame=part(root,formedProfile(profile,.009,.0008),cream,RENTAL.x+side*.052,0,RENTAL.z);frame.name=`rental-trestle-${side}`;}
-  add('rental-shelf',[.095,.004,.046],RENTAL.x,.020,RENTAL.z,blue,.001);
-  add('rental-drawer',[.090,.014,.056],RENTAL.x,.041,RENTAL.z,cream,.002);
-  add('rental-drawer-inlay',[.077,.008,.0015],RENTAL.x,.041,RENTAL.z+.02875,blue,.001);
-  const pull=part(root,turned([[0,-.001],[.002,-.001],[.0025,0],[.002,.002],[0,.002]],16),gold,RENTAL.x,.041,RENTAL.z+.032);pull.rotation.x=Math.PI/2;pull.name='rental-drawer-pull';
-  boxes.push(soccerBox(RENTAL.x,RENTAL.y-.0045,RENTAL.z,.14,.009,.083),soccerBox(RENTAL.x,.020,RENTAL.z,.095,.004,.046),soccerBox(RENTAL.x,.041,RENTAL.z,.09,.014,.056));
+  for(const side of [-1,1]) {const frame=part(root,formedProfile(profile,.009,.0008),cream,WELCOME_DESK.x+side*.052,0,WELCOME_DESK.z);frame.name=`welcome-trestle-${side}`;}
+  add('welcome-shelf',[.095,.004,.046],WELCOME_DESK.x,.020,WELCOME_DESK.z,blue,.001);
+  add('welcome-drawer',[.090,.014,.056],WELCOME_DESK.x,.041,WELCOME_DESK.z,cream,.002);
+  add('welcome-drawer-inlay',[.077,.008,.0015],WELCOME_DESK.x,.041,WELCOME_DESK.z+.02875,blue,.001);
+  const pull=part(root,turned([[0,-.001],[.002,-.001],[.0025,0],[.002,.002],[0,.002]],16),gold,WELCOME_DESK.x,.041,WELCOME_DESK.z+.032);pull.rotation.x=Math.PI/2;pull.name='welcome-drawer-pull';
+  boxes.push(soccerBox(WELCOME_DESK.x,WELCOME_DESK.y-.0045,WELCOME_DESK.z,.14,.009,.083),soccerBox(WELCOME_DESK.x,.020,WELCOME_DESK.z,.095,.004,.046),soccerBox(WELCOME_DESK.x,.041,WELCOME_DESK.z,.09,.014,.056));
   for(const side of [-1,1])for(const leg of [-1,1]) {
-    const box=soccerBox(RENTAL.x+side*.052,.025,RENTAL.z+leg*.026,.009,.046,.010),angle=-leg*.20;
+    const box=soccerBox(WELCOME_DESK.x+side*.052,.025,WELCOME_DESK.z+leg*.026,.009,.046,.010),angle=-leg*.20;
     Object.assign(box.yAxis,{x:0,y:Math.cos(angle),z:Math.sin(angle)});Object.assign(box.zAxis,{x:0,y:-Math.sin(angle),z:Math.cos(angle)});box.margin=.0006;boxes.push(box);
   }
 }

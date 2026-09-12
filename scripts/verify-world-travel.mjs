@@ -6,7 +6,7 @@ import { Facilities } from '../src/facilities/manager.ts';
 import { WorldTravel } from '../src/worlds/travel.ts';
 import { HOME_PORTAL } from '../src/worlds/main/layout.ts';
 import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL, cameraFacingYaw, portalArrivalZ } from '../src/worlds/toy-track/portal-layout.ts';
-import { SOCCER_PORTAL } from '../src/worlds/soccer/layout.ts';
+import { FIELD, SOCCER_PORTAL } from '../src/worlds/soccer/layout.ts';
 
 assert.equal(portalArrivalZ(.6,.5,.8),.6+PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the positive portal side');
 assert.equal(portalArrivalZ(.6,.7,.4),.6-PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the negative portal side');
@@ -69,9 +69,9 @@ assert(Math.abs(body.center.x-SOCCER_PORTAL.x)<1e-8);assert((body.center.z-SOCCE
 const soccer=worlds.soccer;assert(soccer);
 for(const detail of soccer.goalie.face.details.filter(d=>d.kind==='eye')) {
   const p=detail.mesh.geometry.attributes.position;let y=0,z=0;for(let i=0;i<p.count;i++){y+=p.getY(i)/p.count;z+=p.getZ(i)/p.count;}
-  assert(y>.065&&y<.085&&z>-1.43&&z<-1.39,'goalie face binds locally and follows its placed head');
+  assert(y>FIELD.y+.040&&y<FIELD.y+.055&&z>-1.43&&z<-1.39,'goalie face binds locally and follows its on-foot placed head');
 }
-soccer.physics.board();soccer.physics.score=3;worlds.reset();assert(worlds.inSoccer&&!soccer.active&&soccer.physics.score===0);
+soccer.physics.score=3;worlds.reset();assert(worlds.inSoccer&&!soccer.active&&soccer.physics.score===0);
 place(SOCCER_PORTAL.x,SOCCER_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Home').click();await waitForTravel();assert.equal(worlds.current,'home');
 place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Play Soccer').click();await waitForTravel();assert.equal(worlds.soccer,soccer,'soccer geometry reuses its first build');
 worlds.dispose();home.dispose();assert.equal(scene.children.length,0);

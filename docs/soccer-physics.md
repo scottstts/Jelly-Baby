@@ -1,18 +1,13 @@
 # Soccer physics
 
-Soccer uses SI units, the game's 240 Hz fixed step and `PHYS.gravity`. Skating
-is powered support: forces act on live FEM node velocities, with stronger
-lower-body support and a compliant crown. Only boarding, leaving and reset
-place the rest pose directly. The controllable skater's forward speed is
-0.4592 m/s (45.92 cm/s). Its rolling maximum steering rate is 0.72 rad/s,
-matching the stationary pivot sensitivity; its yaw direction reverses while
-backing up. Forward/reverse acceleration acts along the heading, lateral speed
-is damped, and steering never creates sideways translation. A stationary
-steering input instead drives a zero-horizontal-displacement duck-like pivot
-hop at roughly 3.5 hops per second; the attached blades share that phase so one
-blade remains grounded while the other lifts. Releasing movement preserves a short
-coast. Support height follows the pitch, access ramp and wooden concourse. The
-goalkeeper keeps its own independent tracking tuning.
+Soccer uses SI units, the game's 240 Hz fixed step and `PHYS.gravity`. The
+player is never transferred to a separate vehicle or locomotion controller.
+Inside the 2 × 3.08 m pitch bounds, the shared `Locomotion` rig uses a calibrated
+force scale that settles at 3× ordinary measured movement speed, plus a 3×
+gait-cadence scale. Outside those bounds both scales return to 1 immediately.
+This changes running speed and its matching gait only; ordinary camera-relative
+direction, jumping, grabbing, soft-body response and stadium collision stay on
+the shared path.
 
 The ball is a 42 mm sphere with 8 g mass. Gravity, restitution, rolling drag,
 contact-transferred spin, modest Magnus curvature and quaternion rotation run
@@ -23,30 +18,37 @@ delay so the ball cannot stay unreachable.
 
 Ball/jelly response uses a finite live FEM contact patch. The same normalized
 weights determine effective inverse mass, displacement and recoil. A single
-barycentric sample has too little effective mass and allowed the ball to pass
-through a keeper that visually made contact. A regression checks equal/opposite
+barycentric sample has too little effective mass and can let the ball pass
+through a jelly that visually made contact. A regression checks equal/opposite
 combined linear momentum in the isolated patch response.
 
-Space and touch Shoot work only while skating. One second separates action
-starts. The torso arches back, a short wheel-driven lunge moves the body, and
-a contact-relative impulse releases during the forward phase. The shot never
-aims at the goal or snaps the ball to the player. Internal arch/lean offsets
-have zero mass-weighted translation; otherwise windup unintentionally drives
-the whole body backward. The existing cry expression covers effort; a goal
-requests the existing laugh for three seconds.
+Space and touch Shoot work only while the player is inside the pitch bounds.
+One second separates action starts. The shot caches the nearby player-to-ball
+direction, arches and crouches the body with zero-mass-centred posture forces,
+then applies a brief whole-body forward thrust. The release waits until the
+forward lunge has had time to close the normal shooting gap; the impulse is
+emitted only when the live jelly surface is close enough to the ball. Its
+horizontal angle is the physical centre/contact relationship at release, so
+standing left, right or diagonally behind the ball produces the corresponding
+shot. There is no goal targeting, remote kick or ball snap. The existing cry expression covers
+effort; a goal requests the existing laugh for three seconds.
 
-The keeper samples prediction every 120 ms. It estimates time to its defensive
-line, folds wall rebounds into the intercept, and checks ballistic height
-before a jump. Acceleration, speed, cooldown, short commitment and small
-deterministic prediction error prevent perfect tracking. There is no
-teleport-to-ball action. The shot sweep includes central saves and successful
-corner shots; visual contact alone is not a passing save test.
+The goalkeeper has an independent force-driven jelly rig with a 0.40 m/s top
+run speed. Roughly every 85–125 ms it predicts the ball at its defensive line,
+folds side-board rebounds into the lateral intercept, estimates ballistic
+height and commits to a bounded target with small deterministic error. Reaction
+error shrinks as a shot becomes urgent. The keeper also biases its home position
+toward the live ball, leans toward urgent lateral saves and uses physical jumps
+for high balls or late wide emergencies. Acceleration, bounded speed, target
+commitment and jump cooldown make it responsive without perfect tracking.
+There is no teleport-to-ball action.
 
-Player/keeper collision uses a moving compound envelope and reciprocal
-finite-mass recoil. It preserves separate core, head, arms and skates instead
-of filling the whole silhouette with one large box.
+Player/keeper collision uses a moving compound body envelope and reciprocal
+finite-mass recoil. It preserves separate core, head, arms and lower body rather
+than filling the silhouette with one large box.
 
-Audio uses cached procedural friction and impact samples. Quiet skating
-follows measured speed, attenuation and pan. Kicks, posts, body contacts, saves
-and goals have separate envelopes; contacts are debounced. Mute, hidden tabs,
-reset, portal menus, travel and disposal stop ongoing sound.
+Audio uses cached procedural artificial-turf running and impact samples. The
+field-only run loop combines short dry fiber noise with soft repeated footfall
+pulses, then follows measured player speed, attenuation and pan. Kicks, posts,
+body contacts, saves and goals have separate envelopes; contacts are debounced.
+Mute, hidden tabs, reset, portal menus, travel and disposal stop ongoing sound.
