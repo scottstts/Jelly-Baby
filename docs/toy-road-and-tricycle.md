@@ -30,6 +30,14 @@ the baby enters the 240 Hz narrow phase. The tricycle's separate wheel/road
 constraint still uses the unchanged road-facing curb edge, so its driving
 boundary is not loosened by the wider walking platform.
 
+Thin decorative floor contacts use a shared 1.2 mm visual clearance above the
+tabletop depth plane. The house stepping stones are lifted by that datum, and
+each tree carries the same clearance through its plinth, trunk, and crown; the
+tree's walking collision envelope starts at the same height. This keeps their
+grazing-view side faces from competing with the separate tabletop mesh for
+depth ownership while remaining visually grounded by the floor shadow/contact
+passes.
+
 The road keeps its coral borders, connector seams, brass pins, center dashes and
 a checkered start beneath bunting. A studded brick, pen, bottle, eraser and
 cotton reel interrupt alternating sides of the road. Their meshes and collision

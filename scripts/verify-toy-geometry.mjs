@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { Box3 } from 'three/webgpu';
 import { Tricycle } from '../src/worlds/toy-track/facilities/tricycle/graphics.ts';
 import { JellyPortal } from '../src/facilities/portal/graphics.ts';
-import { ToyTrack } from '../src/worlds/toy-track/graphics/track.ts';
+import { ToyTrack, TOY_FLOOR_CLEARANCE } from '../src/worlds/toy-track/graphics/track.ts';
 import { fitGrips } from '../src/worlds/toy-track/facilities/tricycle/fit.ts';
 import { SoftBody } from '../src/physics/soft-body.js';
 import { loadModel } from './load-model.mjs';
@@ -42,6 +42,15 @@ assert.equal(infieldHouses.length,4);assert.equal(infieldTrees.length,7);assert.
 assert(infieldHouses.every(o=>o.scale.x===2&&o.scale.y===2&&o.scale.z===2),'only infield houses use the twofold scenery scale');
 assert(infieldTrees.every(o=>o.scale.x===2&&o.scale.y===2&&o.scale.z===2),'infield trees use the twofold scenery scale');
 assert(outerTrees.every(o=>o.scale.x===1&&o.scale.y===1&&o.scale.z===1),'outer trees keep their original object scale');
+track.group.updateMatrixWorld(true);
+const floorContactMeshes=[];
+track.group.traverse(object=>{if(object.isMesh&&(object.name==='house stepping stone'||object.name==='tree-plinth'))floorContactMeshes.push(object);});
+assert.equal(floorContactMeshes.filter(object=>object.name==='house stepping stone').length,16,'all house paths retain their four stepping stones');
+assert.equal(floorContactMeshes.filter(object=>object.name==='tree-plinth').length,14,'all decorative trees retain their plinth');
+for(const mesh of floorContactMeshes) {
+  const bounds=new Box3().setFromObject(mesh);
+  assert(bounds.min.y>TOY_FLOOR_CLEARANCE-.00001,`${mesh.name} stays clear of the tabletop depth plane`);
+}
 for(const kind of ['brick','pen','bottle','eraser','spool']){const prop=track.group.getObjectByName(kind);assert(prop&&prop.scale.x===1&&prop.scale.y===1&&prop.scale.z===1,`${kind} is repositioned but not scaled`);}
 let failed=0,parts=0;
 function topology(root) {
