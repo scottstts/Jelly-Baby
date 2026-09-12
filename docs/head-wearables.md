@@ -45,3 +45,8 @@ ground and raised-surface shadow systems in sync and eliminates the worn-item
 shadow shimmer that came from stale transforms. Going to bed automatically
 returns a worn item to its original slot; getting up leaves it on the table,
 so it must be worn again deliberately.
+
+All three items also travel to Soccer. While skating, physical skate support
+qualifies for carried-item removal even though the body is above the floor.
+The active Soccer facility yields E to carried attire when its exit action is
+unavailable; approaching the exit gives that contextual action priority.

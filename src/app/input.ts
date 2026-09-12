@@ -27,6 +27,10 @@ export class Input {
   vehicleInput:((throttle:number,turn:number)=>void)|undefined;
   ridingVehicle:()=>boolean=()=>false;
   vehicleHeading:()=>number|undefined=()=>undefined;
+  soccerActive:()=>boolean=()=>false;
+  soccerInput:((x:number,z:number)=>void)|undefined;
+  shoot:()=>void=()=>{};
+  menuOpen:()=>boolean=()=>false;
   private readonly chase:TricycleCamera;
   private vehicleHints=false;
   readonly controls:OrbitControls;
@@ -90,7 +94,7 @@ export class Input {
         e.preventDefault();void sound.unlock().catch(()=>{});button.setPointerCapture(e.pointerId);
         const code=button.dataset.control!;
         this.touchKeys.set(e.pointerId,code);button.classList.add('held');
-        if(code==='Space'&&!this.bodyControlled())rig.jump();
+        if(code==='Space'){if(this.soccerActive())this.shoot();else if(!this.bodyControlled())rig.jump();}
       },{signal});
       const release=(e:PointerEvent)=>{
         this.touchKeys.delete(e.pointerId);button.classList.remove('held');
@@ -217,12 +221,13 @@ export class Input {
     this.body.wake();this.syncGrabControls();
   };
   private keyDown=(e:KeyboardEvent)=>{
+    if(this.menuOpen())return;
     if((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]'))return;
-    if(e.code==='Space'&&(e.target as HTMLElement)?.closest('button'))return;
+    if(e.code==='Space'&&!this.soccerActive()&&(e.target as HTMLElement)?.closest('button'))return;
     if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight','Space'].includes(e.code)) {
       e.preventDefault();this.keys.add(e.code);void this.sound.unlock().catch(()=>{});
     }
-    if(e.code==='Space'&&!e.repeat&&!this.bodyControlled())this.rig.jump();
+    if(e.code==='Space'&&!e.repeat){if(this.soccerActive())this.shoot();else if(!this.bodyControlled())this.rig.jump();}
     if(e.code==='Escape')this.finishRelease();
   };
   clear=()=>{
@@ -245,11 +250,15 @@ export class Input {
     return false;
   }
   step(h:number) {
+    if(this.menuOpen()){this.rig.move.set(0,0,0);return;}
     let x=Number(this.pressed('KeyD','ArrowRight'))-Number(this.pressed('KeyA','ArrowLeft'))+this.joystickX;
     let z=Number(this.pressed('KeyW','ArrowUp'))-Number(this.pressed('KeyS','ArrowDown'))+this.joystickZ;
     const inputLength=Math.hypot(x,z);
     if(inputLength>1){x/=inputLength;z/=inputLength;}
     this.vehicleInput?.(z,-x);
+    // Soccer steering is camera-relative like walking, with a yaw-follow camera.
+    this.camera.getWorldDirection(this.temp);this.temp.y=0;this.temp.normalize();
+    this.soccerInput?.(-this.temp.z*x+this.temp.x*z,this.temp.x*x+this.temp.z*z);
     if(this.bodyControlled()){this.rig.move.set(0,0,0);return;}
     if(x||z) {
       this.camera.getWorldDirection(this.temp);this.temp.y=0;this.temp.normalize();
@@ -272,6 +281,9 @@ export class Input {
     }
   }
   update(dt:number) {
+    const soccer=this.soccerActive();
+    this.controls.maxPolarAngle=soccer?1.46:Math.PI/2-THREE.MathUtils.degToRad(this.camera.fov)/2-.10;
+    this.controls.maxDistance=soccer?.65:.42;
     const riding=this.ridingVehicle();
     if(riding!==this.vehicleHints) {
       this.vehicleHints=riding;
@@ -279,6 +291,8 @@ export class Input {
       this.joystickElement?.setAttribute('aria-label',riding?'Steer and pedal':'Move');
       const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding;jump.style.opacity=riding?'.3':'';}
     }
+    const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding&&!soccer;jump.style.opacity=riding&&!soccer?'.3':'';jump.setAttribute('aria-label',soccer?'Shoot':'Jump');const caption=jump.querySelector('span');if(caption)caption.textContent=soccer?'shoot':'hop';}
+    const labels=document.querySelectorAll('.desktop-hints .hint-label');if(labels[0])labels[0].textContent=soccer?'skate':riding?'pedal · steer':'wander';if(labels[1])labels[1].textContent=soccer?'shoot':'hop';
     this.controls.minDistance=this.facilityCameraDistance()??.135;
     // External resets must never leave pointer capture or orbit state wedged.
     for(const [id,state] of this.grabs)if(!this.body.grabs.includes(state.grab))this.finishRelease(id);
@@ -288,7 +302,7 @@ export class Input {
     this.temp.copy(this.follow).sub(this.controls.target);
     this.camera.position.add(this.temp);this.controls.target.copy(this.follow);
     this.controls.update();
-    this.chase.update(this.camera,this.ridingVehicle()?this.vehicleHeading():undefined,dt);
+    this.chase.update(this.camera,this.ridingVehicle()||soccer?this.vehicleHeading():undefined,dt);
   }
   recenter() {this.clear();this.rig.reset();}
   teleport() {

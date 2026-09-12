@@ -17,6 +17,7 @@
     "test:portal-collision": "node --experimental-strip-types scripts/verify-portal-collision.mjs",
     "test:toy-driving": "node --experimental-strip-types scripts/verify-toy-driving.mjs",
     "test:world-travel": "node --experimental-strip-types scripts/verify-world-travel.mjs",
+    "test:soccer": "node --test --experimental-strip-types scripts/verify-soccer*.mjs scripts/verify-destination-menu.mjs",
     "test:trampoline": "node --experimental-strip-types scripts/verify-trampoline.mjs",
     "test:bed": "node --experimental-strip-types scripts/verify-bed.mjs",
     "test:wearables": "node --experimental-strip-types scripts/verify-wearables.mjs",

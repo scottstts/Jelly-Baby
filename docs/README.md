@@ -22,6 +22,9 @@ portal-linked play worlds, and a deliberately measured optical treatment.
 - [Portal worlds](portal-worlds.md) — travel, loading, world ownership and shadows.
 - [Toy road and tricycle](toy-road-and-tricycle.md) — layout, steering, riding
   physics and crash recovery.
+- [Soccer world](soccer-world.md) — stadium scale, travel, skates and attire;
+  [physics](soccer-physics.md) and [geometry/collision](soccer-geometry.md) cover
+  the ball, keeper, construction and access contracts.
 - [Head wearables](head-wearables.md) — the dressing table, reference hat
   assets, interaction state, head attachment, and jump hop.
 - [Bed and sleeping](bed-and-sleeping.md) — reclining support, blanket physics,

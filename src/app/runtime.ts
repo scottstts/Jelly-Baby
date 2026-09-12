@@ -56,6 +56,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   rig.onJump=()=>wearableTable.jumpFromNormalLocomotion();
   facilities.add(wearableTable);
   worlds.toyFacilities.add(new CarriedWearableFacility(wearableTable));
+  worlds.soccerFacilities.add(new CarriedWearableFacility(wearableTable,()=>worlds.soccer?.active??false));
   facilities.add(new SwingFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(new TrampolineFacility(worlds.home,body,facilityShadows,sound.facility));
   facilities.add(bed);
@@ -67,20 +68,28 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   let lastTime=0,disposed=false;
   const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();};
   const input=new Input(camera,renderer.domElement,body,baby.mesh,rig,sound);
-  input.bodyControlled=()=>worlds.loading||!!worlds.facilities.active;
+  input.bodyControlled=()=>worlds.loading||worlds.menu.opened||!!worlds.facilities.active;
+  input.menuOpen=()=>worlds.menu.opened;
+  input.soccerActive=()=>worlds.inSoccer&&(worlds.soccer?.active??false);
+  input.soccerInput=(x,z)=>{if(worlds.inSoccer&&worlds.soccer?.active)worlds.soccer.physics.player.move.set(x,0,z);};
+  input.shoot=()=>{if(worlds.inSoccer)worlds.soccer?.physics.shoot();};
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
   input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};
   input.ridingVehicle=()=>worlds.inToys&&(worlds.tricycle?.physics.riding??false);
-  input.vehicleHeading=()=>worlds.tricycle?.physics.yaw;
+  input.vehicleHeading=()=>input.soccerActive()?worlds.soccer?.physics.player.yaw:worlds.tricycle?.physics.yaw;
   facilities.onInteract=()=>{input.clear();rig.reset();void sound.unlock().catch(()=>{});};
   worlds.toyFacilities.onInteract=facilities.onInteract;
+  worlds.soccerFacilities.onInteract=facilities.onInteract;
+  worlds.onMenuClose=()=>input.clear();
   worlds.onMove=()=>{input.clear();sound.stopFacilities();physicsClock.reset();};
+  worlds.onMenuOpen=worlds.onMove;
   worlds.onReady=async()=>{
     input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();
     if(worlds.tricycle){
       worlds.tricycle.physics.onCrash=speed=>sound.contact(speed,false);
       worlds.tricycle.onWalkCurbImpact=speed=>rig.surfaceImpact(speed);
     }
+    if(worlds.soccer){worlds.soccer.onPlacement=()=>{input.teleport();rig.yaw=worlds.soccer!.physics.player.yaw;};worlds.soccer.physics.onEvent=(kind,strength,p)=>sound.soccerEvent(kind,strength,p);}
     baby.update();optics.update(renderer,body,true);transport.follow();await transport.update();
   };
   const transport=new OpticalTransport(optics,body,camera,environment.incoming,fail);
@@ -127,7 +136,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
     try {
       const dt=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;
       if(document.hidden){physicsClock.reset();return;}
-      if(worlds.loading){physicsClock.reset();return;}
+      if(worlds.loading||worlds.menu.opened){physicsClock.reset();return;}
       const steps=physicsClock.advance(dt,()=>{
         if(worlds.loading)return;
         const current=worlds.facilities;
@@ -150,6 +159,8 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       sound.listen(camera);
       const tricycle=worlds.inToys?worlds.tricycle?.physics:undefined;
       if(tricycle)sound.tricycleMotion(tricycle.riding?tricycle.rollingSpeed:0,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
+      const soccer=worlds.inSoccer?worlds.soccer?.physics:undefined;
+      if(soccer)sound.soccerMotion(soccer.riding?soccer.player.velocity.length():0,body.center);
       transport.follow();
       optics.update(renderer,body);
       table.mesh.position.x=body.center.x;table.mesh.position.z=body.center.z;

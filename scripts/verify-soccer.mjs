@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { SoftBody } from '../src/physics/soft-body.js';
+import { loadModel } from './load-model.mjs';
+import { SoccerPhysics } from '../src/worlds/soccer/physics.ts';
+import { FIELD, BALL, ENTRANCE } from '../src/worlds/soccer/layout.ts';
+import { soccerSample } from '../src/worlds/soccer/sound.ts';
+
+const body=new SoftBody(loadModel()),soccer=new SoccerPhysics(body),h=1/240;
+assert.notEqual(body.surface.positions,soccer.goalie.body.surface.positions);
+assert.notEqual(body.surface.geometry,soccer.goalie.body.surface.geometry);
+const step=seconds=>{for(let i=0;i<Math.round(seconds/h);i++){soccer.step(h);body.step(h);soccer.afterStep();assert(body.isFinite()&&soccer.goalie.body.isFinite());}};
+assert(!soccer.shoot(),'walking Space cannot shoot');soccer.board();
+step(.3);assert(Math.abs(body.center.z-1.35)<.01);
+assert(body.lastMinJacobian>.2&&soccer.goalie.body.lastMinJacobian>.2,'both jelly bodies preserve volume/orientation');
+soccer.player.move.set(0,0,-1);step(1);
+assert(soccer.player.velocity.length()>.6,'skating exceeds walking speed substantially');
+soccer.player.move.set(0,0,0);step(1);assert(soccer.player.velocity.length()<.13,'coasting drag stops the skater');
+soccer.player.place(0,.055,Math.PI);soccer.centerBall();soccer.ball.z=0;
+const events=[];soccer.onEvent=(kind)=>events.push(kind);
+assert(soccer.shoot());assert(!soccer.shoot(),'one second shot cooldown');
+step(.24);assert(events.includes('kick'));assert(soccer.ballVelocity.z<-.6,'contact-relative forward shot');assert(soccer.crying);
+step(.35);assert(!soccer.crying);assert(!soccer.shoot());step(.51);assert(soccer.shoot());
+soccer.player.place(.4,.3,Math.PI);soccer.centerBall();soccer.ball.set(.13,FIELD.y+BALL.radius,-1.56);soccer.ballVelocity.set(0,0,-.5);
+step(.05);assert.equal(soccer.score,1,'whole-ball crossing scores once');assert(soccer.laughing);step(.6);assert.equal(soccer.score,1);step(2.45);assert(!soccer.laughing,'three second celebration expires');
+assert(Math.abs(soccer.ball.x)<1e-6&&Math.abs(soccer.ball.z)<1e-6,'restart returns ball to centre');
+soccer.ball.set(.95,FIELD.y+BALL.radius,0);soccer.ballVelocity.set(1,0,0);step(.1);assert(soccer.ballVelocity.x<0,'side board rebounds');
+soccer.goalie.place(0,-1.43,0);soccer.ball.set(0,.20,-.98);soccer.ballVelocity.set(0,.15,-1.6);step(.20);assert(soccer.goalie.jumpHeight>0,'keeper launches a physical jump for a high shot');
+soccer.player.place(ENTRANCE.x,ENTRANCE.z-.10,Math.PI);assert(soccer.canLeave);soccer.leave();assert(!soccer.riding&&body.center.z>ENTRANCE.z);
+soccer.reset();assert.equal(soccer.score,0);assert.equal(soccer.riding,false);
+for(const kind of ['roll','kick','save','post','bump','goal']) {const pcm=soccerSample(kind,24000);assert(pcm.every(Number.isFinite));assert(Math.max(...pcm)<.7);assert(pcm.some(v=>Math.abs(v)>.001));}
+console.log('Soccer: independent soft bodies, speed/braking, directional shots/cooldown, expressions, scoring/restart, boards, goalie jump, exit/reset and procedural audio passed.');

@@ -6,13 +6,14 @@ import { Facilities } from '../src/facilities/manager.ts';
 import { WorldTravel } from '../src/worlds/travel.ts';
 import { HOME_PORTAL } from '../src/worlds/main/layout.ts';
 import { PORTAL_ARRIVAL_DISTANCE, TRACK_PORTAL, cameraFacingYaw, portalArrivalZ } from '../src/worlds/toy-track/portal-layout.ts';
+import { SOCCER_PORTAL } from '../src/worlds/soccer/layout.ts';
 
 assert.equal(portalArrivalZ(.6,.5,.8),.6+PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the positive portal side');
 assert.equal(portalArrivalZ(.6,.7,.4),.6-PORTAL_ARRIVAL_DISTANCE,'arrival follows a camera on the negative portal side');
 assert(Math.abs(cameraFacingYaw(0,0,.12,.25)-Math.atan2(.12,.25))<1e-12,'portal arrival yaw faces the orbit camera');
 
 const elements=[];
-const element=()=>{const value={hidden:false,className:'',textContent:'',children:[],append(...nodes){this.children.push(...nodes);},remove(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){}}};elements.push(value);return value;};
+const element=()=>{const listeners={};const value={hidden:false,className:'',textContent:'',children:[],append(...nodes){this.children.push(...nodes);},remove(){},setAttribute(){},addEventListener(name,fn){listeners[name]=fn;},click(){listeners.click?.();},focus(){globalThis.document.activeElement=this;},showModal(){this.open=true;},close(){this.open=false;},classList:{add(){},remove(){}}};elements.push(value);return value;};
 const app=element(),loading=element();
 globalThis.document={createElement:element,querySelector:selector=>selector==='#loading'?loading:app};
 globalThis.window={addEventListener(){}};
@@ -42,7 +43,7 @@ assert.equal(elements.find(item=>item.className==='facility-button')?.textConten
 place(HOME_PORTAL.x+.10,HOME_PORTAL.z-.01);worlds.step(.01);
 assert.equal(moves,0,'walking past the portal does not teleport');
 place(HOME_PORTAL.x,HOME_PORTAL.z+.01);assert(Number.isFinite(worlds.portalFacility.interactionDistance),'portal becomes the nearby facility candidate');
-assert(worlds.portalFacility.interact(),'portal interaction starts travel');await waitForTravel();
+assert(worlds.portalFacility.interact(),'portal interaction opens destinations');assert(worlds.menu.opened&&!worlds.loading&&!worlds.inToys);elements.find(e=>e.textContent==='Play Tricycle').click();await waitForTravel();
 assert(worlds.inToys&&worlds.toys.visible&&!worlds.home.visible);
 assert.equal(ordinaryResets,1,'ordinary home facilities reset when leaving through the portal');
 assert.equal(persistentResets,0,'portal-persistent equipment is not reset when leaving its home world');
@@ -56,11 +57,22 @@ const c=Math.cos(worlds.arrivalYaw),s=Math.sin(worlds.arrivalYaw),node=facingNod
 assert(Math.abs((body.x[node]-body.center.x)-(restDx*c+restDz*s))<1e-8&&Math.abs((body.x[node+2]-body.center.z)-(restDz*c-restDx*s))<1e-8,'teleported soft body is physically rotated to the camera-facing yaw');
 const bike=worlds.tricycle;assert(bike);
 place(TRACK_PORTAL.x,TRACK_PORTAL.z+.01);worlds.step(.01);assert.equal(moves,1,'arrival cooldown prevents bounce-back');assert.equal(worlds.portalFacility.interactionDistance,Infinity,'arrival cooldown hides the portal affordance');
-worlds.step(1.1);assert(Number.isFinite(worlds.portalFacility.interactionDistance));assert(worlds.portalFacility.interact(),'return portal interaction starts travel');await waitForTravel();
+worlds.step(1.1);assert(Number.isFinite(worlds.portalFacility.interactionDistance));assert(worlds.portalFacility.interact(),'return portal opens destinations');elements.find(e=>e.textContent==='Home').click();await waitForTravel();
 assert(!worlds.inToys&&home.enabled&&!worlds.toyFacilities.enabled);
 assert.equal(compiles,2);assert.equal(renders,2);assert.equal(ready,2);
-place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);assert(worlds.portalFacility.interact(),'later portal visits reuse the facility');await waitForTravel();
+place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);assert(worlds.portalFacility.interact(),'later portal visits reuse the facility');elements.find(e=>e.textContent==='Play Tricycle').click();await waitForTravel();
 assert(worlds.inToys);assert.equal(worlds.tricycle,bike,'later visits reuse geometry');
 bike.physics.speed=.2;worlds.reset();assert.equal(bike.physics.speed,0);assert(worlds.inToys,'reset stays in selected world');
+place(TRACK_PORTAL.x,TRACK_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Play Soccer').click();await waitForTravel();
+assert(worlds.inSoccer&&worlds.soccerWorld.visible&&!worlds.toys.visible&&!worlds.home.visible);assert.equal(worlds.facilities,worlds.soccerFacilities);
+assert(Math.abs(body.center.x-SOCCER_PORTAL.x)<1e-8);assert((body.center.z-SOCCER_PORTAL.z)*(camera.position.z-SOCCER_PORTAL.z)>0);
+const soccer=worlds.soccer;assert(soccer);
+for(const detail of soccer.goalie.face.details.filter(d=>d.kind==='eye')) {
+  const p=detail.mesh.geometry.attributes.position;let y=0,z=0;for(let i=0;i<p.count;i++){y+=p.getY(i)/p.count;z+=p.getZ(i)/p.count;}
+  assert(y>.065&&y<.085&&z>-1.43&&z<-1.39,'goalie face binds locally and follows its placed head');
+}
+soccer.physics.board();soccer.physics.score=3;worlds.reset();assert(worlds.inSoccer&&!soccer.active&&soccer.physics.score===0);
+place(SOCCER_PORTAL.x,SOCCER_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Home').click();await waitForTravel();assert.equal(worlds.current,'home');
+place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Play Soccer').click();await waitForTravel();assert.equal(worlds.soccer,soccer,'soccer geometry reuses its first build');
 worlds.dispose();home.dispose();assert.equal(scene.children.length,0);
 console.log('Portal aperture, camera-side arrival and facing, persistent equipment, loading, round trip, ownership, arrival cooldown, reuse, reset and disposal passed.');

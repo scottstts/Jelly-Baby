@@ -1,6 +1,8 @@
 import type { PerspectiveCamera } from 'three/webgpu';
 import { FacilityAudio, type FacilitySoundEvent } from '../facilities/sound.ts';
 import { TricycleRollAudio } from '../worlds/toy-track/facilities/tricycle/sound.ts';
+import { SoccerAudio } from '../worlds/soccer/sound.ts';
+import type { SoccerEvent } from '../worlds/soccer/physics.ts';
 type AudioWindow=Window&{webkitAudioContext?:typeof AudioContext};
 
 export class JellySound {
@@ -11,6 +13,7 @@ export class JellySound {
   private outputPrimed=false;
   private facilities:FacilityAudio|null=null;
   private tricycleRoll:TricycleRollAudio|null=null;
+  private soccer:SoccerAudio|null=null;
   private listener={x:0,y:.12,z:.19,rightX:1,rightZ:0};
   private abort=new AbortController();
   muted=false;
@@ -35,6 +38,7 @@ export class JellySound {
       this.context=context;this.master=master;this.compressor=compressor;
       this.facilities=new FacilityAudio(context,master);
       this.tricycleRoll=new TricycleRollAudio(context,master);
+      this.soccer=new SoccerAudio(context,master);
       return context;
     } catch {
       if(context&&context.state!=='closed')void context.close().catch(()=>{});
@@ -73,7 +77,15 @@ export class JellySound {
     const l=this.listener,dx=event.x-l.x,dy=event.y-l.y,dz=event.z-l.z,distance=Math.hypot(dx,dy,dz);
     this.facilities?.play(event,distance,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance));
   };
-  stopFacilities() {this.facilities?.stop();this.tricycleRoll?.stop();}
+  stopFacilities() {this.facilities?.stop();this.tricycleRoll?.stop();this.soccer?.stop();}
+  soccerMotion(speed:number,p:{x:number;y:number;z:number}) {
+    if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
+    this.soccer?.motion(speed,distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
+  }
+  soccerEvent(kind:SoccerEvent,strength:number,p:{x:number;y:number;z:number}) {
+    if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
+    this.soccer?.play(kind,strength,distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
+  }
   tricycleMotion(speed:number,x:number,y:number,z:number) {
     if(this.muted||document.hidden)return;
     const l=this.listener,dx=x-l.x,dy=y-l.y,dz=z-l.z,distance=Math.hypot(dx,dy,dz);
@@ -104,6 +116,7 @@ export class JellySound {
   }
   dispose() {
     this.facilities?.dispose();this.facilities=null;this.tricycleRoll?.dispose();this.tricycleRoll=null;
+    this.soccer?.dispose();this.soccer=null;
     this.abort.abort();this.master?.disconnect();this.compressor?.disconnect();
     const context=this.context;this.context=null;this.master=null;this.compressor=null;this.resumePromise=null;
     if(context&&context.state!=='closed')void context.close().catch(()=>{});

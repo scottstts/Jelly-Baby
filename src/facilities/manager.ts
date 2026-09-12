@@ -17,6 +17,8 @@ export interface Facility {
   readonly cameraDistance?:number;
   /** Leave this facility's state untouched when crossing a portal. */
   readonly persistAcrossTravel?:boolean;
+  /** Allow removing carried attire when this facility has no contextual action. */
+  readonly allowCarriedInteraction?:boolean;
   /** Built-in afterStep methods mutate cage state only through these contacts. */
   readonly collision?:FacilityCollision;
   interact():boolean;
@@ -59,7 +61,9 @@ export class Facilities {
   get crying() {return this.enabled&&this.items.some(item=>item.crying);}
   private get candidate() {
     if(!this.enabled)return undefined;
-    return this.active??this.items.filter(item=>Number.isFinite(item.interactionDistance))
+    const active=this.active;
+    if(active?.allowCarriedInteraction&&active.showPrompt===false)return this.items.find(item=>item.persistAcrossTravel&&Number.isFinite(item.interactionDistance));
+    return active??this.items.filter(item=>Number.isFinite(item.interactionDistance))
       .sort((a,b)=>a.interactionDistance-b.interactionDistance)[0];
   }
   private interact() {

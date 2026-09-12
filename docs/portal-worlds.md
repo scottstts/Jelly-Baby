@@ -22,7 +22,12 @@ facility availability gates keep travel unavailable while loading, grabbed, in
 the cooldown, or while another facility owns the body. Travel still uses the
 same loading, arrival, and camera-side placement path after the interaction.
 
-[`WorldTravel`](../src/worlds/travel.ts) owns two scene roots and independent
+Interaction opens a modal destination selector: **Home**, **Play Tricycle**,
+and **Play Soccer**. Mouse/touch or arrows and Enter confirm a destination;
+Escape or Stay here cancels. Navigation keys belong exclusively to the modal,
+and simulation pauses until it closes. Choosing the current world just closes it.
+
+[`WorldTravel`](../src/worlds/travel.ts) owns three scene roots and independent
 facility managers. The home placement lives in
 [`src/worlds/main/layout.ts`](../src/worlds/main/layout.ts), while the track
 placement is derived by
@@ -37,12 +42,13 @@ interaction exposes `Take off <name>` whenever no nearer facility owns E; taking
 it off reparents the item to its original slot on the hidden dressing table so it
 is waiting there on return. Reset stays in the current world.
 
-The toy world is imported and built on first passage. The existing loading
+The toy and soccer worlds are imported and built on their first passage. The existing loading
 screen paints before construction, collision warmup and shader compilation.
 Physics pauses; the destination receives a first render and GPU completion
 fence before the overlay closes. Failures use the existing terminal error UI
 with the transition stage. Later passages reuse geometry; disposal releases
-both worlds.
+all worlds. Soccer follows the same arrival, reset, persistent-attire and
+lighting contracts; see [Soccer world](soccer-world.md) for placement and access.
 
 Shadow proxies respect inherited world visibility. Both portal housings are
 registered as ordinary facility-lighting participants: their complete static

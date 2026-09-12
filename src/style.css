@@ -78,3 +78,11 @@ h2{font:italic 39px Georgia,serif;letter-spacing:-1.6px;font-weight:400;margin:0
 .night-mode button:focus-visible{outline-color:#c5d7f2}
 .night-mode #loading{color:#394028}
 @media(max-width:420px){.actions{gap:4px;right:16px}.actions .icon-button{width:34px;height:34px}.masthead{left:16px}h1{font-size:31px}}
+.destination-menu { border:1px solid #fff5dc; border-radius:22px; padding:25px; width:min(340px,85vw); background:#fff4de; color:#354b45; box-shadow:0 18px 80px #352b2455; }
+.destination-menu::backdrop { background:#302c3455; backdrop-filter:blur(5px); }
+.destination-menu h2 { font-size:19px; margin:0 0 18px; font-weight:650; }
+.destination-menu button { display:block; width:100%; padding:15px 20px; border:0; border-radius:12px; margin:8px 0; background:#e4edd6; color:inherit; font:inherit; cursor:pointer; text-align:left; }
+.destination-menu button:hover,.destination-menu button:focus-visible { background:#c7dfbb; outline:2px solid #618357; outline-offset:2px; }
+.destination-menu button[aria-current=true]::after { content:' · here'; opacity:.55; }
+.destination-menu .destination-cancel { background:transparent; font-size:13px; text-align:center; }
+.soccer-score { position:fixed; top:calc(76px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); border-radius:20px; padding:7px 16px; background:#fff4dedb; color:#354b45; font-size:13px; pointer-events:none; }

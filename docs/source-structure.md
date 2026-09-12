@@ -17,6 +17,8 @@ src/
 ├── worlds/
 │   ├── main/facilities/         Playroom facilities: bed, swing, trampoline, wearables
 │   ├── toy-track/               Track layout, road/scenery, and tricycle facility
+│   ├── soccer/                  Stadium, skates, ball/keeper, turf, collision and sound
+│   ├── destination-menu.ts      Modal selection and keyboard boundary
 │   └── travel.ts                World roots, managers, loading, and portal travel
 └── main.ts                      Browser shell entry point
 ```
