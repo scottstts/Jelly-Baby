@@ -16,7 +16,7 @@ export function markStadiumSupport(body:SoftBody,boxes:readonly CollisionBox[]) 
         const dx=body.x[j]-box.center.x,dy=body.x[j+1]-box.center.y,dz=body.x[j+2]-box.center.z;
         const height=(dx*up.x+dy*up.y+dz*up.z)*sign-half[axis];if(height<-.002||height>.006)continue;
         let inside=true;for(let a=0;a<3;a++)if(a!==axis){const v=axes[a];if(Math.abs(dx*v.x+dy*v.y+dz*v.z)>half[a]+.001)inside=false;}
-        if(inside&&body.velocity[j+1]<.12){body.grounded=true;return true;}
+        if(inside&&body.velocity[j+1]<.12){body.contact[i]=Math.max(body.contact[i],.0001);body.grounded=true;return true;}
       }
     }
   }

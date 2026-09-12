@@ -114,7 +114,10 @@ export class WorldTravel {
     }
     if(destination==='soccer'&&!this.soccer) {
       const {SoccerFacility}=await import('./soccer/facility.ts');if(this.disposed)return;
-      this.soccer=new SoccerFacility(this.soccerWorld,this.body,this.shadows);this.soccerFacilities.add(this.soccer);
+      const {disposeGrassTextures,loadGrassTextures}=await import('./soccer/turf.ts');
+      const grass=await loadGrassTextures();
+      if(this.disposed){disposeGrassTextures(grass);return;}
+      this.soccer=new SoccerFacility(this.soccerWorld,this.body,this.shadows,grass);this.soccerFacilities.add(this.soccer);
       this.soccerPortal=new JellyPortal(SOCCER_PORTAL.x,SOCCER_PORTAL.z);this.soccerWorld.add(this.soccerPortal.group);this.shadows.add(this.soccerPortal.group,this.soccerPortal.lightingEnvelope);
       this.soccerPortalFacility=new PortalFacility(this.body,'soccer-portal-housing',SOCCER_PORTAL.x,SOCCER_PORTAL.z,this.soccerPortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
       this.soccerFacilities.add(this.soccerPortalFacility);this.soccerFacilities.warmupCollisions();

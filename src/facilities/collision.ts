@@ -26,6 +26,8 @@ export interface CollisionBox {
   motion?:CollisionMotion;
   /** Optional per-box override for the facility contact margin. */
   margin?:number;
+  /** Use local finite-mass contacts instead of rigid bulk-throw stopping. */
+  skipThrowSweep?:boolean;
 }
 
 // The visible body is much denser than the mechanical cage. A single surface

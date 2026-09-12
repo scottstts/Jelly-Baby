@@ -64,7 +64,10 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const flavorPicker=new FlavorPicker(flavor=>{
     baby.setFlavor(flavor);optics.setAbsorption(JELLY_FLAVORS[flavor].absorption);
   });
-  rig.onContact=(speed,foot)=>sound.contact(speed,foot);
+  rig.onContact=(speed,foot)=>{
+    const grassLanding=!foot&&worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
+    if(grassLanding)sound.soccerLanding(speed,body.center);else sound.contact(speed,foot);
+  };
   const physicsClock=new FixedStepper(PHYS.step);
   let lastTime=0,disposed=false;
   const reset=()=>{if(worlds.loading)return;sound.stopFacilities();worlds.reset();input.teleport();rig.yaw=worlds.arrivalYaw;baby.resetFace();physicsClock.reset();};
@@ -72,7 +75,6 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   input.bodyControlled=()=>worlds.loading||worlds.menu.opened||!!worlds.facilities.active;
   input.menuOpen=()=>worlds.menu.opened;
   input.soccerOnField=()=>worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
-  input.shoot=()=>{if(worlds.inSoccer)worlds.soccer?.physics.shoot(rig.yaw);};
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
   input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};
   input.ridingVehicle=()=>worlds.inToys&&(worlds.tricycle?.physics.riding??false);

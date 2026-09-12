@@ -70,7 +70,7 @@ export class GoalieRig {
   }
 }
 
-export type SoccerEvent='kick'|'bump'|'save'|'post'|'goal';
+export type SoccerEvent='bump'|'save'|'post'|'goal';
 export class SoccerPhysics {
   readonly body:SoftBody;
   readonly goalie:GoalieRig;
@@ -80,8 +80,6 @@ export class SoccerPhysics {
   readonly ballRotation=new Quaternion();
   score=0;
   private elapsed=0;
-  private lastShot=-2;
-  private shotAge=Infinity;
   private celebration=0;
   private resetBallIn=0;
   private reaction=0;
@@ -96,39 +94,18 @@ export class SoccerPhysics {
   private readonly point=new Vector3();
   private readonly previousBall=new Vector3();
   private readonly patchWeights:Float64Array;
-  private readonly shotDirection=new Vector3(0,0,-1);
-  private shotYaw=Math.PI;
-  private readonly playerRestCenter=new Vector3();
-  private playerMeanUpper=0;
-  private playerMeanUpperSquared=0;
   onEvent:(kind:SoccerEvent,strength:number,position:Vector3)=>void=()=>{};
   constructor(body:SoftBody,goalieBody=makeGoalieBody(body)) {
     this.body=body;this.patchWeights=new Float64Array(body.mass.length);this.goalie=new GoalieRig(goalieBody);this.goalie.place(0,GOALIE_HOME_Z,0);
-    for(let i=0;i<body.mass.length;i++) {
-      const weight=body.mass[i]/body.totalMass,upper=clamp(body.rest[i*3+1]/.07,0,1);
-      this.playerRestCenter.addScaledVector(new Vector3().fromArray(body.rest,i*3),weight);this.playerMeanUpper+=upper*weight;this.playerMeanUpperSquared+=upper*upper*weight;
-    }
   }
   get onField(){return onSoccerField(this.body.center.x,this.body.center.z);}
-  get crying(){return this.shotAge<.48&&this.celebration<=0;}
+  get crying(){return false;}
   get laughing(){return this.celebration>0;}
-  shoot(playerYaw=0) {
-    if(this.body.grab||!this.onField||this.elapsed-this.lastShot<1)return false;
-    this.lastShot=this.elapsed;this.shotAge=0;
-    this.shotDirection.copy(this.ball).sub(this.body.center);this.shotDirection.y=0;
-    if(this.shotDirection.lengthSq()<1e-5||this.shotDirection.length()>.14)this.shotDirection.set(Math.sin(playerYaw),0,Math.cos(playerYaw));
-    else this.shotDirection.normalize();
-    this.shotYaw=Math.atan2(this.shotDirection.x,this.shotDirection.z);
-    return true;
-  }
   private emit(kind:SoccerEvent,strength:number) {
-    if(kind==='goal'||kind==='kick'||this.eventHold<=0){this.onEvent(kind,strength,this.ball);this.eventHold=.09;}
+    if(kind==='goal'||this.eventHold<=0){this.onEvent(kind,strength,this.ball);this.eventHold=.09;}
   }
   step(h:number) {
     this.elapsed+=h;this.eventHold-=h;this.jumpCooldown-=h;this.goalieHold=Math.max(0,this.goalieHold-h);this.celebration=Math.max(0,this.celebration-h);
-    const previousAge=this.shotAge;this.shotAge+=h;
-    if(this.shotAge<.5)this.applyShotPose(h);
-    if(previousAge<.285&&this.shotAge>=.285)this.strike();
     this.thinkGoalie(h);this.goalie.step(h);this.goalie.body.step(h);
     if(this.resetBallIn>0){this.resetBallIn-=h;if(this.resetBallIn<=0)this.centerBall();}
     this.previousBall.copy(this.ball);
@@ -143,55 +120,6 @@ export class SoccerPhysics {
     const spinSpeed=this.ballSpin.length();if(spinSpeed>1e-5){this.rotation.setFromAxisAngle(this.normal.copy(this.ballSpin).normalize(),spinSpeed*h);this.ballRotation.premultiply(this.rotation).normalize();}
   }
   afterStep(){this.contactBody(this.body,false);this.confineGoalie();}
-  private applyShotPose(h:number) {
-    const age=this.shotAge,b=this.body,v=b.velocity;
-    let arch=0,crouch=0;
-    if(age<.16) {
-      const t=age/.16,ease=.5-.5*Math.cos(Math.PI*t);arch=-.014*ease;crouch=.0045*ease;
-    } else if(age<.30) {
-      const t=(age-.16)/.14,ease=.5-.5*Math.cos(Math.PI*t);arch=-.014+.024*ease;crouch=.0045*(1-ease);
-    } else if(age<.46) {
-      const t=(age-.30)/.16,ease=.5+.5*Math.cos(Math.PI*t);arch=.010*ease;
-    }
-    let vx=0,vy=0,vz=0;
-    for(let i=0;i<b.mass.length;i++){const j=i*3,w=b.mass[i]/b.totalMass;vx+=v[j]*w;vy+=v[j+1]*w;vz+=v[j+2]*w;}
-    const c=Math.cos(this.shotYaw),s=Math.sin(this.shotYaw),baseY=b.center.y-this.playerRestCenter.y;
-    for(let i=0;i<b.mass.length;i++) {
-      const j=i*3,rx=b.rest[j]-this.playerRestCenter.x,ry=b.rest[j+1],rz=b.rest[j+2]-this.playerRestCenter.z,upper=clamp(ry/.07,0,1);
-      const bend=arch*(upper*upper-this.playerMeanUpperSquared),vertical=(upper-this.playerMeanUpper);
-      const tx=b.center.x+rx*c+rz*s+this.shotDirection.x*bend;
-      const tz=b.center.z+rz*c-rx*s+this.shotDirection.z*bend;
-      const ty=baseY+ry-crouch*vertical-Math.abs(arch)*.14*vertical;
-      const k=upper>.35?430:260,damping=18;
-      v[j]+=(k*(tx-b.x[j])-damping*(v[j]-vx))*h;
-      v[j+1]+=(k*(ty-b.x[j+1])-damping*(v[j+1]-vy))*h;
-      v[j+2]+=(k*(tz-b.x[j+2])-damping*(v[j+2]-vz))*h;
-    }
-    // The release is a brief whole-body push; the elastic body supplies the
-    // recoil and follow-through rather than a scripted position change.
-    if(age>=.16&&age<.29) {
-      const thrust=2.35*Math.sin(Math.PI*(age-.16)/.13);
-      for(let j=0;j<v.length;j+=3){v[j]+=this.shotDirection.x*thrust*h;v[j+2]+=this.shotDirection.z*thrust*h;}
-    }
-    b.canSleep=false;b.wake();
-  }
-  private strike() {
-    const delta=this.normal.copy(this.ball).sub(this.body.center),planar=Math.hypot(delta.x,delta.z);
-    // No remote kick or goal aim: the effort animation can miss if the ball is
-    // not within the live jelly surface at release.
-    if(planar>.09||planar<.006||Math.abs(delta.y)>.075)return;
-    let surfaceDistance=Infinity;
-    for(const contact of this.body.contacts){const point=this.point;point.set(0,0,0);for(const [id,w] of contact.weights){point.x+=this.body.x[id*3]*w;point.y+=this.body.x[id*3+1]*w;point.z+=this.body.x[id*3+2]*w;}surfaceDistance=Math.min(surfaceDistance,point.distanceTo(this.ball));}
-    if(surfaceDistance>BALL.radius+.012)return;
-    // The launch vector is the physical player-to-ball relationship at contact.
-    // Standing to either side therefore produces the corresponding diagonal shot.
-    delta.y=clamp((this.ball.y-(FIELD.y+.016))*.8+.004,.004,.032);delta.normalize();
-    const impulse=.0145;
-    this.ballVelocity.addScaledVector(delta,impulse/BALL.mass);
-    for(let j=0;j<this.body.velocity.length;j+=3){this.body.velocity[j]-=delta.x*impulse/this.body.totalMass;this.body.velocity[j+1]-=delta.y*impulse/this.body.totalMass;this.body.velocity[j+2]-=delta.z*impulse/this.body.totalMass;}
-    this.ballSpin.y+=clamp((this.shotDirection.x*delta.z-this.shotDirection.z*delta.x)*18,-12,12);
-    this.emit('kick',1);
-  }
   private foldBoardX(x:number) {
     const half=1-BALL.radius,width=2*half,shifted=x+half,phase=((shifted%(2*width))+2*width)%(2*width);
     return (phase<=width?phase:2*width-phase)-half;
@@ -292,5 +220,5 @@ export class SoccerPhysics {
     if(dx||dz){for(let j=0;j<b.x.length;j+=3){b.x[j]+=dx;b.x[j+2]+=dz;if(dx&&b.velocity[j]*dx<0)b.velocity[j]*=-.15;if(dz&&b.velocity[j+2]*dz<0)b.velocity[j+2]*=-.15;}b.updateCenter();b.surfaceDirty=true;}
   }
   centerBall(){this.ball.set(0,FIELD.y+BALL.radius,0);this.ballVelocity.set(0,0,0);this.ballSpin.set(0,0,0);this.resetBallIn=0;}
-  reset(){this.score=0;this.shotAge=Infinity;this.lastShot=-2;this.elapsed=this.celebration=this.reaction=this.jumpCooldown=this.goalieHold=this.eventHold=this.goalieUrgency=0;this.targetX=0;this.targetZ=GOALIE_HOME_Z;this.centerBall();this.ballRotation.identity();this.goalie.place(0,GOALIE_HOME_Z,0);}
+  reset(){this.score=0;this.elapsed=this.celebration=this.reaction=this.jumpCooldown=this.goalieHold=this.eventHold=this.goalieUrgency=0;this.targetX=0;this.targetZ=GOALIE_HOME_Z;this.centerBall();this.ballRotation.identity();this.goalie.place(0,GOALIE_HOME_Z,0);}
 }

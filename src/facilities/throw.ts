@@ -23,6 +23,7 @@ export function stopFacilityThrow(body:SoftBody,vertices:Int32Array,boxes:readon
       px+=previous[j]*w;py+=previous[j+1]*w;pz+=previous[j+2]*w;
     }
     for(const box of boxes) {
+      if(box.skipThrowSweep)continue;
       if(box.motion)continue;
       const boxMargin=box.margin===undefined?margin:box.margin-margin+margin;
       let enter=0,leave=first,ax=0,ay=0,az=0;

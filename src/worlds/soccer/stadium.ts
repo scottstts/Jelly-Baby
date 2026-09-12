@@ -7,7 +7,7 @@ import { FIELD, GOAL, ENTRANCE, FIELD_RAMP, soccerBox } from './layout.ts';
 import type { CollisionBox } from '../../facilities/collision.ts';
 import { stadiumEntrance } from './entrance.ts';
 import { formedProfile } from './craft.ts';
-import { plasticPileTexture, turfMaterial } from './turf.ts';
+import { createFallbackGrassTextures, disposeGrassTextures, turfMaterial, type GrassTextureSet } from './turf.ts';
 
 /** Named manufactured solids survive until audit; runtime batches by finish. */
 export class SoccerStadium {
@@ -17,17 +17,18 @@ export class SoccerStadium {
   readonly turf:T.Mesh;
   readonly scoreboard=new T.Group();
   private readonly digits:T.Mesh[][]=[];
-  private readonly pile=plasticPileTexture();
-  constructor(keepParts=false) {
+  private readonly grass:GrassTextureSet;
+  constructor(keepParts=false,grass=createFallbackGrassTextures()) {
+    this.grass=grass;
     this.group.name='soccer-stadium';this.staticParts.name='stadium-parts';this.staticParts.userData.keepParts=keepParts;this.group.add(this.staticParts);
     const cream=enamel(0xf5e6c5,.33),blue=enamel(0x23559c,.29),seatBlue=enamel(0x4688c8,.4),gold=enamel(0xeabf57,.34),coral=enamel(0xdb6755),net=enamel(0xe9e2cd,.7);
     const addBox=(name:string,size:number[],x:number,y:number,z:number,material:T.Material=cream,r=.004,collision=false)=>{
       const mesh=part(this.staticParts,moldedBox(size,r),material,x,y,z);mesh.name=name;
       if(collision)this.boxes.push(soccerBox(x,y,z,...size as [number,number,number]));return mesh;
     };
-    // The felt slab is 2 x 3.08 m; paint belongs to its material, never stacked coplanar decals.
-    this.turf=part(this.group,moldedBox([FIELD.width,.010,FIELD.length],.001),turfMaterial(this.pile),0,.007,0);this.turf.name='two-metre-pitch';
-    this.boxes.push(soccerBox(0,.007,0,2,.010,3.08));
+    // The turf slab is 2 x 3.08 m; markings belong to its material, never stacked coplanar decals.
+    this.turf=part(this.group,moldedBox([FIELD.width,.010,FIELD.length],.001),turfMaterial(this.grass),0,.007,0);this.turf.name='two-metre-pitch';
+    const turfBox=soccerBox(0,.007,0,2,.010,3.08);turfBox.skipThrowSweep=true;this.boxes.push(turfBox);
     addBox('pitch-undertray',[2.035,.001,3.08],0,.0015,0,blue,.0003);
     const rampProfile=[[.001,FIELD_RAMP.start],[FIELD.y,FIELD_RAMP.start],[.001,FIELD_RAMP.end]];
     part(this.staticParts,solidLoft([-1,1].map(side=>rampProfile.map(([y,z])=>[FIELD_RAMP.x+side*FIELD_RAMP.width/2,y,z]))),cream).name='field-access-ramp';
@@ -99,7 +100,7 @@ export class SoccerStadium {
       this.digits.push(segments);
     }
     this.setScore(0);
-    this.makeFibers();batch(this.staticParts);
+    batch(this.staticParts);
   }
   private seatGeometry() {
     // One formed L shell, 3 mm thick, with a curved knee instead of intersecting boxes.
@@ -145,25 +146,7 @@ export class SoccerStadium {
       part(this.staticParts,closedTube([new T.Vector3(-w,height,z+end*.007),new T.Vector3(-w,height,rear),new T.Vector3(w,height,rear),new T.Vector3(w,height,z+end*.007)],.0007,6),material).name=`net-cross-${end}-${i}`;
     }
   }
-  private makeFibers() {
-    // Deterministic extruded triangular plastic fibers. Batched explicitly because
-    // shared shadow proxies operate on ordinary meshes, not instance transforms.
-    const positions:number[]=[],normals:number[]=[];let seed=419;
-    const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-    const a=new T.Vector3(),b=new T.Vector3(),n=new T.Vector3();
-    for(let i=0;i<26000;i++) {
-      const x=(random()-.5)*1.98,z=(random()-.5)*3.06,y=FIELD.y+.00005,h=.0013+random()*.0017,angle=random()*Math.PI*2,r=.00035;
-      // Keep painted lines readable by leaving their fibers the same cream as the substrate.
-      const vertices=Array.from({length:3},(_,j)=>[x+Math.cos(angle+j*2*Math.PI/3)*r,y,z+Math.sin(angle+j*2*Math.PI/3)*r]);vertices.push([x+.00035*Math.sin(angle),y+h,z+.00035*Math.cos(angle)]);
-      for(const face of [[0,1,2],[0,3,1],[1,3,2],[2,3,0]]) {
-        a.fromArray(vertices[face[1]]).sub(b.fromArray(vertices[face[0]]));b.fromArray(vertices[face[2]]).sub(n.fromArray(vertices[face[0]]));n.crossVectors(a,b).normalize();
-        for(const index of face){positions.push(...vertices[index]);normals.push(n.x,n.y,n.z);}
-      }
-    }
-    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new T.Float32BufferAttribute(normals,3));
-    const mesh=part(this.group,geometry,turfMaterial(this.pile,true));mesh.name='plastic-turf-fibers';mesh.userData.aggregate=true;
-  }
-  dispose(){disposeParts(this.group);this.pile.dispose();}
+  dispose(){disposeParts(this.group);disposeGrassTextures(this.grass);}
 }
 
 export function soccerBallGeometry() {return new T.SphereGeometry(.021,40,28);}

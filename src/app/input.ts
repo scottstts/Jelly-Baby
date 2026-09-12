@@ -29,7 +29,6 @@ export class Input {
   ridingVehicle:()=>boolean=()=>false;
   vehicleHeading:()=>number|undefined=()=>undefined;
   soccerOnField:()=>boolean=()=>false;
-  shoot:()=>void=()=>{};
   menuOpen:()=>boolean=()=>false;
   private readonly chase:TricycleCamera;
   private readonly soccerCamera:SoccerCameraPitch;
@@ -96,7 +95,7 @@ export class Input {
         e.preventDefault();void sound.unlock().catch(()=>{});button.setPointerCapture(e.pointerId);
         const code=button.dataset.control!;
         this.touchKeys.set(e.pointerId,code);button.classList.add('held');
-        if(code==='Space'){if(this.soccerOnField())this.shoot();else if(!this.bodyControlled())rig.jump();}
+        if(code==='Space'&&!this.bodyControlled())rig.jump();
       },{signal});
       const release=(e:PointerEvent)=>{
         this.touchKeys.delete(e.pointerId);button.classList.remove('held');
@@ -225,11 +224,11 @@ export class Input {
   private keyDown=(e:KeyboardEvent)=>{
     if(this.menuOpen())return;
     if((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]'))return;
-    if(e.code==='Space'&&!this.soccerOnField()&&(e.target as HTMLElement)?.closest('button'))return;
+    if(e.code==='Space'&&(e.target as HTMLElement)?.closest('button'))return;
     if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight','Space'].includes(e.code)) {
       e.preventDefault();this.keys.add(e.code);void this.sound.unlock().catch(()=>{});
     }
-    if(e.code==='Space'&&!e.repeat){if(this.soccerOnField())this.shoot();else if(!this.bodyControlled())this.rig.jump();}
+    if(e.code==='Space'&&!e.repeat&&!this.bodyControlled())this.rig.jump();
     if(e.code==='Escape')this.finishRelease();
   };
   clear=()=>{
@@ -281,9 +280,9 @@ export class Input {
   }
   update(dt:number) {
     const soccer=this.soccerOnField();
+    this.controls.maxDistance=.42;
     this.soccerCamera.setFieldState(this.camera,soccer);
     this.controls.maxPolarAngle=this.soccerCamera.needsWidePolarLimit?1.46:Math.PI/2-THREE.MathUtils.degToRad(this.camera.fov)/2-.10;
-    this.controls.maxDistance=.42;
     const riding=this.ridingVehicle();
     if(riding!==this.vehicleHints) {
       this.vehicleHints=riding;
@@ -291,8 +290,8 @@ export class Input {
       this.joystickElement?.setAttribute('aria-label',riding?'Steer and pedal':'Move');
       const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding;jump.style.opacity=riding?'.3':'';}
     }
-    const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding&&!soccer;jump.style.opacity=riding&&!soccer?'.3':'';jump.setAttribute('aria-label',soccer?'Shoot':'Jump');const caption=jump.querySelector('span');if(caption)caption.textContent=soccer?'shoot':'hop';}
-    const labels=document.querySelectorAll('.desktop-hints .hint-label');if(labels[0])labels[0].textContent=soccer?'run':riding?'pedal · steer':'wander';if(labels[1])labels[1].textContent=soccer?'shoot':'hop';
+    const jump=document.querySelector<HTMLButtonElement>('.touch-controls .jump');if(jump){jump.disabled=riding;jump.style.opacity=riding?'.3':'';jump.setAttribute('aria-label','Jump');const caption=jump.querySelector('span');if(caption)caption.textContent='hop';}
+    const labels=document.querySelectorAll('.desktop-hints .hint-label');if(labels[0])labels[0].textContent=soccer?'run':riding?'pedal · steer':'wander';if(labels[1])labels[1].textContent='hop';
     this.controls.minDistance=this.facilityCameraDistance()??.135;
     // External resets must never leave pointer capture or orbit state wedged.
     for(const [id,state] of this.grabs)if(!this.body.grabs.includes(state.grab))this.finishRelease(id);

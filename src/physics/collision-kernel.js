@@ -39,7 +39,9 @@ export function createCollisionKernels(ex,allocCopy,allocZero) {
         /** @param {Float64Array | undefined} bounds */
         resolveBoxes(boxes,margin,bounds=undefined){
           // Unknown user-defined motions keep their callback semantics in JS.
-          for(let i=0;i<boxes.length;i++)if(boxes[i].motion&&!boxes[i].motion.nativePendulum)return null;
+          // Turf landing boxes also keep their local deformable response in JS;
+          // the native bulk-throw sweep intentionally has no per-box skip bit.
+          for(let i=0;i<boxes.length;i++)if(boxes[i].skipThrowSweep||(boxes[i].motion&&!boxes[i].motion.nativePendulum))return null;
           if(boxes.length>capacity){
             capacity=Math.max(boxes.length,capacity*2,16);
             [boxesPtr,packed]=allocZero(capacity*16,Float64Array);

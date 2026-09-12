@@ -8,12 +8,12 @@ release.
 ## Browser shell and interface
 
 Portals open a destination menu. Arrows and Enter belong exclusively to the
-modal until confirmation or cancellation. In Soccer, Space and the touch hop
-button become Shoot only while the baby is inside the pitch bounds; stepping off
-the pitch restores the ordinary jump action. Soccer movement remains the normal
-camera-relative on-foot control, with a 3× field run speed and gait cadence. The
-camera changes only its pitch on field entry/exit: horizontal orbit stays manual
-and releasing a drag never snaps behind the player.
+modal until confirmation or cancellation. Space and the touch hop button remain
+the ordinary jump action in every world, including on the Soccer pitch. Soccer
+movement remains the normal camera-relative on-foot control, with a 3× field run
+speed and gait cadence. The camera changes only its pitch on field entry/exit:
+horizontal orbit stays manual and releasing a drag never snaps behind the
+player.
 
 While riding the tricycle, WASD and the touch joystick supply vehicle-relative
 throttle and steering. The movement hint changes to “pedal · steer,” and the
@@ -51,7 +51,9 @@ night HDR loads. Its controller is disposed with the runtime.
 [`Input`](../src/app/input.ts) creates `OrbitControls` on the renderer canvas.
 Pan is disabled, damping is enabled, and distance/polar limits keep the camera
 near the tabletop. Dragging the background is therefore an orbit gesture;
-scroll or pinch changes distance.
+scroll or pinch changes distance. On Soccer field entry, the camera eases to
+the grazing polar angle and the maximum `.42 m` orbit distance together, then
+restores the captured normal angle and distance when it leaves the field.
 
 The camera target follows the body's mass center with exponential smoothing. The
 target is kept above a small floor threshold and the camera's minimum distance
@@ -158,7 +160,8 @@ is used. Audio failure does not block the game.
 
 Body contact uses no audio files. It combines three damped sine membrane modes
 with a short band-passed noise transient. Foot contacts use a higher transient
-band than body contacts, and strength is derived from impact speed. The sound
+band than body contacts, and landing contacts have an added impact lift so a
+jump landing remains audible. Strength is derived from impact speed. The sound
 listener follows the camera and stores its right vector for facility panning.
 Tricycle collisions reuse the body-contact texture but trigger only on a meaningful
 new impact; sustained obstacle contact is held as one contact so it cannot retrigger
@@ -166,11 +169,13 @@ at the 240 Hz physics rate. Landing on a raised toy-track curb feeds its downwar
 impact into the same body-contact debounce, so it sounds like an ordinary floor
 landing rather than a separate facility effect.
 
-Soccer adds a field-only procedural artificial-turf run layer. It combines a dry
-short-fiber brush with soft footfall pulses, follows measured player speed, and
-uses the same distance attenuation and stereo panning as other positional audio.
-The layer stops immediately off the pitch and shares the normal mute, reset,
-travel, hidden-tab and disposal lifecycle.
+Soccer adds a field-only procedural artificial-turf run layer. It combines the
+original dry short-fiber brush with soft footfall pulses, follows measured player
+speed with a clearly audible gain, and uses the same distance attenuation and
+stereo panning as other positional audio. Raised-turf support routes jump
+landings to a related grass-brush transient rather than the hard-surface body
+contact sound. The layer stops immediately off the pitch and shares the normal
+mute, reset, travel, hidden-tab and disposal lifecycle.
 
 A moving tricycle adds one deliberately quiet continuous procedural rolling
 texture. It begins only above a small motion threshold, follows absolute vehicle

@@ -10,6 +10,7 @@ import { SOCCER_ENVELOPE } from './layout.ts';
 import { GoalieContact } from './goalie-contact.ts';
 import { StadiumCollisionGrid } from './collision-grid.ts';
 import { markStadiumSupport } from './walking-support.ts';
+import type { GrassTextureSet } from './turf.ts';
 
 export class SoccerFacility implements Facility {
   readonly id='soccer';readonly label='Soccer';
@@ -17,13 +18,14 @@ export class SoccerFacility implements Facility {
   readonly collision:FacilityCollision;
   private readonly goalieContact:GoalieContact;
   private readonly collisionGrid:StadiumCollisionGrid;
-  readonly stadium=new SoccerStadium();
+  readonly stadium:SoccerStadium;
   readonly goalie:Baby;
   readonly ball=new Mesh(soccerBallGeometry(),soccerBallMaterial());
   private readonly moving=new Group();
   private readonly score=document.createElement('div');
   private scoreValue=-1;
-  constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows) {
+  constructor(scene:Scene,body:SoftBody,shadows:FacilityShadows,grass?:GrassTextureSet) {
+    this.stadium=new SoccerStadium(false,grass);
     this.physics=new SoccerPhysics(body);this.goalie=new Baby(this.physics.goalie.body);this.goalie.setFlavor('blueberry');
     // FaceSkin binds in the original local rest frame, then follows the placed cage.
     this.physics.goalie.body.updateSurface();this.goalie.update();

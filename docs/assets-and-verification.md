@@ -20,6 +20,10 @@ it does not replace visual WebGPU inspection.
 | `src/assets/wood_texture/wood_base.jpg` | Table albedo. | Authored runtime asset. |
 | `src/assets/wood_texture/wood_normal.png` | Table normal map. | Authored runtime asset. |
 | `src/assets/wood_texture/wood_roughness.jpg` | Table roughness map. | Authored runtime asset. |
+| `src/assets/grass_texture/grass_base.jpg` | Soccer pitch albedo, repeated in metre-based UVs. | Authored runtime asset. |
+| `src/assets/grass_texture/grass_normal.jpg` | Soccer pitch tangent-space normal detail. | Authored runtime asset. |
+| `src/assets/grass_texture/grass_roughness.jpg` | Soccer pitch roughness variation. | Authored runtime asset. |
+| `src/assets/grass_texture/grass_displacement.jpg` | Soccer pitch height detail, applied as a fine material bump. | Authored runtime asset. |
 | `src/assets/model/jelly-baby.bin` | Packed generated model, cage, contact, optical, and mapping arrays. | Generated; consumed by runtime. |
 | `src/assets/model/jelly-baby.json` | Packed-array layout, source hash, scale, and physical volume. | Generated; checked by tests. |
 | `assets/screenshot.jpeg` | README hero image. | Authored presentation asset. |

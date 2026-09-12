@@ -22,16 +22,11 @@ barycentric sample has too little effective mass and can let the ball pass
 through a jelly that visually made contact. A regression checks equal/opposite
 combined linear momentum in the isolated patch response.
 
-Space and touch Shoot work only while the player is inside the pitch bounds.
-One second separates action starts. The shot caches the nearby player-to-ball
-direction, arches and crouches the body with zero-mass-centred posture forces,
-then applies a brief whole-body forward thrust. The release waits until the
-forward lunge has had time to close the normal shooting gap; the impulse is
-emitted only when the live jelly surface is close enough to the ball. Its
-horizontal angle is the physical centre/contact relationship at release, so
-standing left, right or diagonally behind the ball produces the corresponding
-shot. There is no goal targeting, remote kick or ball snap. The existing cry expression covers
-effort; a goal requests the existing laugh for three seconds.
+Space and touch hop remain ordinary on-foot jumps inside the pitch bounds as
+well as outside them. There is no player shooting action, remote kick or ball
+snap. The ball still responds to its own gravity, boards, posts, goalkeeper
+contacts and goal crossing; a goal requests the existing laugh for three
+seconds.
 
 The goalkeeper has an independent force-driven jelly rig with a 0.40 m/s top
 run speed. Roughly every 85–125 ms it predicts the ball at its defensive line,
@@ -49,6 +44,8 @@ than filling the silhouette with one large box.
 
 Audio uses cached procedural artificial-turf running and impact samples. The
 field-only run loop combines short dry fiber noise with soft repeated footfall
-pulses, then follows measured player speed, attenuation and pan. Kicks, posts,
-body contacts, saves and goals have separate envelopes; contacts are debounced.
-Mute, hidden tabs, reset, portal menus, travel and disposal stop ongoing sound.
+pulses, then follows measured player speed, attenuation and pan at an audible
+gain. Posts, body contacts, saves and goals have separate envelopes; field
+support routes jump landings into a related dry-grass transient rather than the
+solid-surface body impact. Contacts are debounced. Mute, hidden tabs, reset,
+portal menus, travel and disposal stop ongoing sound.

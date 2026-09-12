@@ -82,6 +82,10 @@ export class JellySound {
     if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
     this.soccer?.motion(speed,distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
   }
+  soccerLanding(speed:number,p:{x:number;y:number;z:number}) {
+    if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
+    this.soccer?.landing(Math.min(1,speed/.62),distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
+  }
   soccerEvent(kind:SoccerEvent,strength:number,p:{x:number;y:number;z:number}) {
     if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
     this.soccer?.play(kind,strength,distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
@@ -94,14 +98,14 @@ export class JellySound {
   contact(speed:number,foot:boolean) {
     const ctx=this.context, out=this.master;
     if(!ctx||!out||ctx.state==='closed'||this.muted) return;
-    const t=ctx.currentTime, strength=Math.min(1,speed/.8);
+    const t=ctx.currentTime, landing=!foot, strength=Math.min(1,speed/(landing?.62:.8)),impactBoost=landing?1.45:1;
     // Damped wet membrane modes, plus a brief filtered surface-contact transient.
     const base=(foot?190:125)+Math.random()*18;
     for(const [ratio,level,decay] of [[1,.28,.15],[1.63,.12,.095],[2.7,.045,.04]]) {
       const osc=ctx.createOscillator(), gain=ctx.createGain();
       osc.type='sine'; osc.frequency.setValueAtTime(base*ratio*(1+strength*.9),t);
       osc.frequency.exponentialRampToValueAtTime(base*ratio*.65,t+.07);
-      gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(level*(.14+strength),t+.003);
+      gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(level*impactBoost*(.14+strength),t+.003);
       gain.gain.exponentialRampToValueAtTime(.0001,t+decay*(1+strength));
       osc.connect(gain).connect(out);osc.start(t);osc.stop(t+.35);
       osc.onended=()=>{osc.disconnect();gain.disconnect();};
@@ -111,7 +115,7 @@ export class JellySound {
     for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.009));
     const noise=ctx.createBufferSource(), filter=ctx.createBiquadFilter(), gain=ctx.createGain();
     noise.buffer=buffer;filter.type='bandpass';filter.frequency.value=foot?950:620;filter.Q.value=1.5;
-    gain.gain.value=.10*strength;noise.connect(filter).connect(gain).connect(out);noise.start(t);
+    gain.gain.value=.10*impactBoost*strength;noise.connect(filter).connect(gain).connect(out);noise.start(t);
     noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};
   }
   dispose() {

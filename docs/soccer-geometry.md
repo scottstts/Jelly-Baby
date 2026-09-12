@@ -7,20 +7,22 @@ the welcome desk has pierced trestles, a supported shelf and recessed drawer.
 Gate leaves have continuous frames and hinged spindles. The open gate, field
 access and goal mouths are real openings.
 
-Grass has two scales: 26,000 closed physical fibers provide silhouette and
-grazing detail, while a deterministic mipmapped ribbon-height field represents
-dense short plastic pile underneath. Height, color and roughness share that
-field. Paint belongs to the material rather than coplanar decals. The slab and
-physical fibers receive shared shadows and jelly caustics.
+The pitch is a material-mapped turf slab using the authored `grass_texture`
+base, normal, roughness, and displacement maps. The maps use a `.16 m`
+metre-based tile, so the 2 × 3.08 m pitch receives 12.5 × 19.25 square repeats
+without stretching the grass. The displacement map supplies a restrained
+vertex-height offset and fine bump detail; no procedural sprout mesh is needed.
+Paint belongs to the same turf material as the base texture rather than
+coplanar decals, and the slab receives shared shadows and jelly caustics.
 
 The quality gate uses 25 micrometres of plane tolerance, 0.02 square millimetres
 of clipped-overlap area, and a 1.5 mm solid-clash depth setting. Topology rejects
 open solids, inverted components, invalid normals and degenerate faces. Four
 hinge sleeves intentionally enclose their pivot rails and key into the jamb;
 only those named pairs receive clash allowances, and coplanar checks stay on.
-Turf is an intentional aggregate: every emitted triangle and normal is checked,
-with the repeated closed-fiber topology checked separately. Both named and
-material-batched assemblies are audited, including the pitch and score digits.
+Turf is an intentional material-mapped slab: every emitted triangle and normal
+is checked. Both named and material-batched assemblies are audited, including
+the pitch and score digits.
 
 Collision follows surfaces: seat pans and backs are separate, terraces and
 canopies have finite height, posts follow frame segments, and thin net sheets
@@ -32,6 +34,12 @@ A 16 cm shallow ramp reaches the raised turf. Upward contact marks raised
 surfaces as grounded after collision so ordinary walking and the 3× field run
 retain traction on the ramp, pitch and seating. Side contacts cannot grant
 support. No invisible rectangular player fence surrounds the pitch.
+
+The turf landing volume keeps the local finite-mass contact response for fast
+throws instead of using the structural-piece bulk-throw sweep. Small and high
+releases therefore both transfer impact into the live cage deformation, with
+high releases retaining proportionally stronger settling shake. Structural
+stadium pieces retain the swept throw guard against tunnelling.
 
 A static XZ index prunes distant collision pieces. Queries use conservative
 cage/binding bounds, including swept throws and stretched skin, plus a small
@@ -47,4 +55,4 @@ and target size. No world-specific light or quality reduction is introduced.
 
 Automated checks do not replace manual WebGPU review. Useful views include both
 gate sides, the concourse behind the near net, grazing turf, welcome-desk joins,
-direct ramp access, shooting follow-through and keeper jump/recovery extrema.
+direct ramp access, jump landings and keeper jump/recovery extrema.

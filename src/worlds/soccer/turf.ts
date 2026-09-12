@@ -1,29 +1,69 @@
-import { DataTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, RGBAFormat } from 'three/webgpu';
-import { abs, bumpMap, float, max, mix, positionLocal, sin, texture, vec3 } from 'three/tsl';
+import * as THREE from 'three/webgpu';
+import type Node from 'three/src/nodes/core/Node.js';
+import { abs, add, bumpMap, float, max, mix, mul, normalLocal, normalMap, normalize, positionLocal, sin, texture, vec2, vec3 } from 'three/tsl';
 import { enamel } from '../../graphics/shared/toy-parts.ts';
 
-/** Dense short ribbons form the plastic pile below the explicit silhouette fibers.
- * Mipmaps integrate the microgeometry at distance instead of aliasing tiny blades.
- */
-export function plasticPileTexture() {
-  const size=512,data=new Uint8Array(size*size*4),cells=64;
-  const hash=(x:number,y:number)=>{let n=Math.imul((x+cells)%cells,374761393)^Math.imul((y+cells)%cells,668265263);n=Math.imul(n^(n>>>13),1274126177);return (n>>>0)/4294967296;};
-  for(let y=0;y<size;y++)for(let x=0;x<size;x++) {
-    const px=x/size*cells,py=y/size*cells,cx=Math.floor(px),cy=Math.floor(py);let height=0,tone=0;
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++) {
-      const gx=cx+dx,gy=cy+dy,r=hash(gx,gy),angle=r*Math.PI*2;
-      const ux=px-gx-.2-.6*hash(gx+19,gy),uy=py-gy-.2-.6*hash(gx,gy+29);
-      const along=ux*Math.cos(angle)+uy*Math.sin(angle),across=-ux*Math.sin(angle)+uy*Math.cos(angle);
-      const ribbon=Math.max(0,1-Math.abs(across)/.24)*Math.max(0,1-(along/.75)**2);
-      const value=Math.sqrt(ribbon)*(.45+.55*r);if(value>height){height=value;tone=r;}
-    }
-    const i=(y*size+x)*4;data[i]=Math.round(height*255);data[i+1]=Math.round((.30+.7*tone)*255);data[i+2]=Math.round((.45+.3*height)*255);data[i+3]=255;
-  }
-  const map=new DataTexture(data,size,size,RGBAFormat);map.wrapS=map.wrapT=RepeatWrapping;map.magFilter=LinearFilter;map.minFilter=LinearMipmapLinearFilter;map.generateMipmaps=true;map.anisotropy=8;map.needsUpdate=true;return map;
+export const GRASS_TILE_METERS=.16;
+
+export type GrassTextureSet={
+  base:THREE.Texture;
+  normal:THREE.Texture;
+  roughness:THREE.Texture;
+  displacement:THREE.Texture;
+};
+
+const grassTextureURLs=[
+  new URL('../../assets/grass_texture/grass_base.jpg',import.meta.url).href,
+  new URL('../../assets/grass_texture/grass_normal.jpg',import.meta.url).href,
+  new URL('../../assets/grass_texture/grass_roughness.jpg',import.meta.url).href,
+  new URL('../../assets/grass_texture/grass_displacement.jpg',import.meta.url).href,
+];
+
+function configureGrassTexture(map:THREE.Texture,colorSpace:THREE.ColorSpace=THREE.NoColorSpace) {
+  map.colorSpace=colorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;
+  map.magFilter=THREE.LinearFilter;map.minFilter=THREE.LinearMipmapLinearFilter;
+  map.generateMipmaps=true;map.anisotropy=8;map.needsUpdate=true;return map;
 }
 
-export function turfMaterial(pile:DataTexture,blade=false) {
-  const material=enamel(0x43883d,.59),p=positionLocal,sample=texture(pile,p.xz.div(.16));
+/** The browser path loads the authored four-map package before Soccer is built. */
+export async function loadGrassTextures():Promise<GrassTextureSet> {
+  if(typeof document==='undefined'||typeof Image==='undefined'||typeof document.createElementNS!=='function')return createFallbackGrassTextures();
+  const loader=new THREE.TextureLoader();
+  const [base,normal,roughness,displacement]=await Promise.all(grassTextureURLs.map(url=>loader.loadAsync(url)));
+  configureGrassTexture(base,THREE.SRGBColorSpace);
+  configureGrassTexture(normal);configureGrassTexture(roughness);configureGrassTexture(displacement);
+  return {base,normal,roughness,displacement};
+}
+
+function solidTexture(r:number,g:number,b:number,colorSpace:THREE.ColorSpace=THREE.NoColorSpace) {
+  return configureGrassTexture(new THREE.DataTexture(new Uint8Array([r,g,b,255]),1,1,THREE.RGBAFormat),colorSpace);
+}
+
+/** Node geometry checks construct the stadium without a DOM/Image loader. */
+export function createFallbackGrassTextures():GrassTextureSet {
+  return {
+    base:solidTexture(58,128,47,THREE.SRGBColorSpace),
+    normal:solidTexture(128,128,255),
+    roughness:solidTexture(150,150,150),
+    displacement:solidTexture(128,128,128),
+  };
+}
+
+export function disposeGrassTextures(textures:GrassTextureSet) {
+  new Set(Object.values(textures)).forEach(texture=>texture.dispose());
+}
+
+export function turfMaterial(grass:GrassTextureSet) {
+  const material=enamel(0x43883d,.59),p=positionLocal;
+  // The tile size is expressed in metres: the 2 x 3.08 m pitch receives
+  // 12.5 x 19.25 square repeats without stretching the authored grass.
+  const uv=p.xz.div(GRASS_TILE_METERS);
+  const base=texture(grass.base,uv).rgb;
+  const sourceRoughness=texture(grass.roughness,uv).r;
+  const sourceDisplacement=texture(grass.displacement,uv).r;
+  const sourceNormal=normalMap(texture(grass.normal,uv),vec2(.42,-.42)) as unknown as Node<'vec3'>;
+  const heightNormal=bumpMap(sourceDisplacement,float(.0009)) as unknown as Node<'vec3'>;
+  const displacement=sourceDisplacement.sub(.5).mul(.0018);
   material.clearcoat=.3;material.clearcoatRoughness=.37;
   const stripe=sin(p.z.mul(Math.PI/.22)).mul(.019);
   const edge=max(abs(p.x).sub(.992),abs(p.z).sub(1.532));
@@ -31,9 +71,12 @@ export function turfMaterial(pile:DataTexture,blade=false) {
   const boxX=abs(abs(p.x).sub(.40)),boxZ=abs(abs(p.z).sub(1.19));
   const penalty=abs(p.x).lessThan(.40).and(boxZ.lessThan(.003)).or(abs(p.z).greaterThan(1.19).and(boxX.lessThan(.003)));
   const paint=float(edge.greaterThan(0).or(center.lessThan(.0035)).or(halfway.lessThan(.0035)).or(penalty));
-  const green=mix(vec3(.037,.13,.026),vec3(.13,.34,.063),sample.r.mul(.6).add(sample.g.mul(.4))).add(stripe);
-  material.colorNode=mix(green,vec3(.86,.88,.68).mul(sample.r.mul(.18).add(.82)),paint);
-  material.roughnessNode=sample.b.mul(.28).add(.42);
-  if(!blade)material.normalNode=bumpMap(sample.r,float(.0012));
+  const green=base.mul(float(1).add(stripe));
+  material.colorNode=mix(green,vec3(.86,.88,.68),paint);
+  material.roughnessNode=sourceRoughness.mul(.34).add(.38);
+  // NodeMaterial position displacement makes the height map affect the
+  // actual turf silhouette; keep bevels and the underside fixed to the slab.
+  material.positionNode=positionLocal.add(vec3(0,displacement.mul(float(normalLocal.y.greaterThan(.5))),0));
+  material.normalNode=normalize(add(mul(sourceNormal,float(.78)),mul(heightNormal,float(.22))));
   return material;
 }
