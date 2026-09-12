@@ -28,15 +28,29 @@ snap. The ball still responds to its own gravity, boards, posts, goalkeeper
 contacts and goal crossing; a goal requests the existing laugh for three
 seconds.
 
-The goalkeeper has an independent force-driven jelly rig with a 0.40 m/s top
-run speed. Roughly every 85–125 ms it predicts the ball at its defensive line,
-folds side-board rebounds into the lateral intercept, estimates ballistic
-height and commits to a bounded target with small deterministic error. Reaction
-error shrinks as a shot becomes urgent. The keeper also biases its home position
-toward the live ball, leans toward urgent lateral saves and uses physical jumps
-for high balls or late wide emergencies. Acceleration, bounded speed, target
-commitment and jump cooldown make it responsive without perfect tracking.
-There is no teleport-to-ball action.
+The goalkeeper has an independent force-driven jelly rig with a 0.32 m/s top
+run speed and a stateful heuristic controller. Roughly every 75–120 ms it
+re-evaluates the situation, but all resulting actions are still ordinary
+movement, reach and jump targets rather than ball snapping or teleportation.
+For direct shots it predicts a board-folded lateral intercept and ballistic
+height, cuts the angle modestly when time allows, carries deterministic
+reaction error that shrinks with urgency, and physically jumps for reachable
+high or late wide saves. When there is no immediate shot it uses goal/ball
+geometry to hold an angle-aware set position instead of simply mirroring ball X.
+
+The controller also has explicit loose-ball, rescue and clearance behavior. It
+will step out for a slow reachable ball in the goal area, retreat goal-side when
+the ball gets behind it, then drive back through the ball instead of standing
+between the ball and the goal. Rescue movement first creates lateral clearance
+around the ball so backing up does not simply knock it into the net. If the ball
+is already touching the keeper's rear silhouette, a bounded emergency hook is
+allowed to turn that real contact back toward the field. A successful save can
+seed a short clearance memory so the keeper follows a weak rebound rather than
+immediately returning home. Physical keeper/ball contacts may add a small
+forward/outward parry only after real contact; the equal-and-opposite impulse is
+applied back to the live keeper contact patch. This improves clearances without
+increasing initial save coverage, so finite speed, reaction delay, prediction
+error and jump cooldown still leave corners and fast shots beatable.
 
 Player/keeper collision uses a moving compound body envelope and reciprocal
 finite-mass recoil. It preserves separate core, head, arms and lower body rather

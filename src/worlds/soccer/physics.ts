@@ -2,9 +2,9 @@ import { BufferAttribute, DynamicDrawUsage, Quaternion, Vector3 } from 'three/we
 import { SoftBody } from '../../physics/soft-body.js';
 import { PHYS, clamp } from '../../physics/constants.js';
 import { BALL, FIELD, GOAL, onSoccerField } from './layout.ts';
+import { GOALIE_BACK_Z, GOALIE_FRONT_Z, GOALIE_HOME_Z, GOALIE_SIDE_LIMIT, GoalieBrain } from './goalie-brain.ts';
 
 const GOALIE_MAX_SPEED=.32;
-const GOALIE_HOME_Z=-1.43;
 
 /** Clone mutable skin/cage buffers; the goalie must never write the player's skin. */
 export function makeGoalieBody(player:SoftBody) {
@@ -82,13 +82,10 @@ export class SoccerPhysics {
   private elapsed=0;
   private celebration=0;
   private resetBallIn=0;
-  private reaction=0;
-  private targetX=0;
-  private targetZ=GOALIE_HOME_Z;
-  private jumpCooldown=0;
   private eventHold=0;
-  private goalieHold=0;
-  private goalieUrgency=0;
+  private goalieClearance=0;
+  private goalieTouchCooldown=0;
+  private readonly goalieBrain=new GoalieBrain();
   private readonly rotation=new Quaternion();
   private readonly normal=new Vector3();
   private readonly point=new Vector3();
@@ -105,7 +102,7 @@ export class SoccerPhysics {
     if(kind==='goal'||this.eventHold<=0){this.onEvent(kind,strength,this.ball);this.eventHold=.09;}
   }
   step(h:number) {
-    this.elapsed+=h;this.eventHold-=h;this.jumpCooldown-=h;this.goalieHold=Math.max(0,this.goalieHold-h);this.celebration=Math.max(0,this.celebration-h);
+    this.elapsed+=h;this.eventHold-=h;this.goalieTouchCooldown=Math.max(0,this.goalieTouchCooldown-h);this.celebration=Math.max(0,this.celebration-h);
     this.thinkGoalie(h);this.goalie.step(h);this.goalie.body.step(h);
     if(this.resetBallIn>0){this.resetBallIn-=h;if(this.resetBallIn<=0)this.centerBall();}
     this.previousBall.copy(this.ball);
@@ -120,41 +117,14 @@ export class SoccerPhysics {
     const spinSpeed=this.ballSpin.length();if(spinSpeed>1e-5){this.rotation.setFromAxisAngle(this.normal.copy(this.ballSpin).normalize(),spinSpeed*h);this.ballRotation.premultiply(this.rotation).normalize();}
   }
   afterStep(){this.contactBody(this.body,false);this.confineGoalie();}
-  private foldBoardX(x:number) {
-    const half=1-BALL.radius,width=2*half,shifted=x+half,phase=((shifted%(2*width))+2*width)%(2*width);
-    return (phase<=width?phase:2*width-phase)-half;
-  }
   private thinkGoalie(h:number) {
-    this.reaction-=h;
-    if(this.reaction<=0) {
-      const p=this.ball,v=this.ballVelocity,g=this.goalie;
-      this.reaction=.085+.04*(.5+.5*Math.sin(this.elapsed*5.17+this.score*.91));
-      const time=v.z<-.10?(GOALIE_HOME_Z-p.z)/v.z:Infinity;
-      if(time>0&&time<1.65) {
-        const intercept=this.foldBoardX(p.x+v.x*time);
-        const urgency=1-clamp((time-.12)/1.15,0,1),error=(.006+.014*(1-urgency))*Math.sin(this.elapsed*4.31+this.score*1.7);
-        if(this.goalieHold<=0) {
-          this.targetX=clamp(intercept+error,-GOAL.width/2+.018,GOAL.width/2-.018);
-          this.targetZ=GOALIE_HOME_Z+clamp((.65-time)*.055,0,.042);
-          this.goalieHold=.08+.16*urgency;
-        }
-        this.goalieUrgency=urgency;
-        const height=p.y+v.y*time-.5*PHYS.gravity*time*time,dx=intercept-g.body.center.x;
-        const highSave=height>FIELD.y+.071&&height<FIELD.y+.245&&Math.abs(dx)<.145;
-        const wideEmergency=time<.24&&Math.abs(dx)>.075&&Math.abs(dx)<.19&&height<FIELD.y+.13;
-        if(this.jumpCooldown<=0&&(highSave||wideEmergency)) {
-          g.jumpSpeed=highSave?clamp((height-FIELD.y-.052)/Math.max(.12,time)+PHYS.gravity*time*.5,.30,.66):.25;
-          this.jumpCooldown=highSave?.92:.68;this.goalieHold=Math.max(this.goalieHold,.24);
-        }
-      } else {
-        this.goalieUrgency=0;
-        if(this.goalieHold<=0){this.targetX=clamp(p.x*.28,-.12,.12);this.targetZ=GOALIE_HOME_Z+(p.z<-.8?.018:0);}
-      }
-    }
-    const g=this.goalie,dx=this.targetX-g.body.center.x,dz=this.targetZ-g.body.center.z;
-    g.move.set(clamp(dx*10,-1,1),0,clamp(dz*9,-.65,.65));if(g.move.length()>1)g.move.normalize();
+    const p=this.ball,v=this.ballVelocity,g=this.goalie,d=this.goalieBrain.step(h,{ballX:p.x,ballY:p.y,ballZ:p.z,ballVX:v.x,ballVY:v.y,ballVZ:v.z,keeperX:g.body.center.x,keeperZ:g.body.center.z,elapsed:this.elapsed,score:this.score});
+    this.goalieClearance=d.clearance;if(d.jumpSpeed>0)g.jumpSpeed=d.jumpSpeed;
+    const dx=d.targetX-g.body.center.x,dz=d.targetZ-g.body.center.z;
+    const active=d.mode==='rescue'||d.mode==='clear'||d.mode==='challenge',gain=active?14:d.mode==='intercept'?11:8;
+    g.move.set(clamp(dx*gain,-1,1),0,clamp(dz*(active?13:9),active?-1:-.65,active?1:.65));if(g.move.length()>1)g.move.normalize();
     const desired=Math.atan2(this.ball.x-g.body.center.x,this.ball.z-g.body.center.z);g.yaw+=Math.atan2(Math.sin(desired-g.yaw),Math.cos(desired-g.yaw))*(1-Math.exp(-7*h));
-    const desiredReach=this.goalieUrgency*clamp(dx*.16,-.014,.014);g.reach+=(desiredReach-g.reach)*(1-Math.exp(-13*h));
+    g.reach+=(d.reach-g.reach)*(1-Math.exp(-13*h));
   }
   private contactBody(body:SoftBody,goalie:boolean) {
     if(this.ball.distanceToSquared(body.center)>.13**2)return;
@@ -183,8 +153,20 @@ export class SoccerPhysics {
       body.velocity[j]-=n.x*impulse*weight;body.velocity[j+1]-=n.y*impulse*weight;body.velocity[j+2]-=n.z*impulse*weight;
     }
     this.ballSpin.y+=clamp(((this.ballVelocity.x-vx)*n.z-(this.ballVelocity.z-vz)*n.x)*3,-2,2);
+    if(goalie&&relative<-.025&&this.goalieTouchCooldown<=0) {
+      this.applyGoalieClearance(body,weights);this.goalieTouchCooldown=.11;this.goalieBrain.notifySave(this.ball.z,this.ballVelocity.z);
+    }
     body.updateCenter();body.surfaceDirty=true;body.wake();
-    if(relative<-.06){this.emit(goalie?'save':'bump',clamp(-relative,0,1));if(goalie)this.goalieHold=.24;}
+    if(relative<-.06)this.emit(goalie?'save':'bump',clamp(-relative,0,1));
+  }
+  private applyGoalieClearance(body:SoftBody,weights:Float64Array) {
+    const strength=this.goalieClearance;if(strength<=.02||this.ball.z>-.95||this.ball.y>FIELD.y+GOAL.height+.06)return;
+    const desiredForward=.10+.15*strength,maxDelta=.08+.47*strength*strength*strength,delta=clamp(desiredForward-this.ballVelocity.z,0,maxDelta);if(delta<=1e-6)return;
+    const x=Math.sign(this.ball.x)*.14*strength,invLength=1/Math.hypot(x,1),dx=x*invLength,dz=invLength,impulse=BALL.mass*delta/dz;
+    this.ballVelocity.x+=dx*impulse/BALL.mass;this.ballVelocity.z+=dz*impulse/BALL.mass;
+    for(let id=0;id<weights.length;id++) {
+      const j=id*3,weight=body.inverseMass[id]*weights[id];body.velocity[j]-=dx*impulse*weight;body.velocity[j+2]-=dz*impulse*weight;
+    }
   }
   private boundaries(h:number) {
     const p=this.ball,v=this.ballVelocity,r=BALL.radius,floor=FIELD.y+r;
@@ -216,9 +198,9 @@ export class SoccerPhysics {
     const vn=this.ballVelocity.dot(n);if(vn<0){this.ballVelocity.addScaledVector(n,-1.7*vn);this.emit('post',Math.min(1,-vn));}
   }
   private confineGoalie() {
-    const b=this.goalie.body,dx=clamp(b.center.x,-.205,.205)-b.center.x,dz=clamp(b.center.z,-1.485,-1.30)-b.center.z;
+    const b=this.goalie.body,dx=clamp(b.center.x,-GOALIE_SIDE_LIMIT,GOALIE_SIDE_LIMIT)-b.center.x,dz=clamp(b.center.z,GOALIE_BACK_Z,GOALIE_FRONT_Z)-b.center.z;
     if(dx||dz){for(let j=0;j<b.x.length;j+=3){b.x[j]+=dx;b.x[j+2]+=dz;if(dx&&b.velocity[j]*dx<0)b.velocity[j]*=-.15;if(dz&&b.velocity[j+2]*dz<0)b.velocity[j+2]*=-.15;}b.updateCenter();b.surfaceDirty=true;}
   }
   centerBall(){this.ball.set(0,FIELD.y+BALL.radius,0);this.ballVelocity.set(0,0,0);this.ballSpin.set(0,0,0);this.resetBallIn=0;}
-  reset(){this.score=0;this.elapsed=this.celebration=this.reaction=this.jumpCooldown=this.goalieHold=this.eventHold=this.goalieUrgency=0;this.targetX=0;this.targetZ=GOALIE_HOME_Z;this.centerBall();this.ballRotation.identity();this.goalie.place(0,GOALIE_HOME_Z,0);}
+  reset(){this.score=0;this.elapsed=this.celebration=this.eventHold=this.goalieClearance=this.goalieTouchCooldown=0;this.goalieBrain.reset();this.centerBall();this.ballRotation.identity();this.goalie.place(0,GOALIE_HOME_Z,0);}
 }

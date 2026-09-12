@@ -47,8 +47,10 @@ The goalkeeper uses an independent clone of the existing cage, the blueberry
 material and existing face rendering. Its face binds in the original local rest
 frame before the skin moves to the goal; binding after world placement would
 silently put features in the wrong places. The keeper uses a force-driven foot
-gait, prediction with finite reaction/commitment error, lateral anticipation,
-body lean and physical jumps. It never teleports to the ball.
+gait plus a stateful controller for set positioning, shot interception,
+loose-ball challenges, behind-goalie rescue and post-save clearance. Prediction
+still has finite reaction/error, and saves remain bounded by physical movement,
+body lean, reach and jumps. It never teleports to the ball.
 
 See [soccer physics](soccer-physics.md) and
 [soccer geometry and collision](soccer-geometry.md) for implementation contracts.
