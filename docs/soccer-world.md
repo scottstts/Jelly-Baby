@@ -8,7 +8,10 @@ is 60 cm off the goal centreline. Never move it back behind the net or fill the
 entry aisle with seating. These are both measured and traversed in tests.
 
 The shared portal offers Home, Play Tricycle and Play Soccer. Soccer geometry
-loads on first selection and reuses objects afterward. Arrival uses the shared
+loads on first selection and reuses objects and compiled pipelines afterward. Its
+identical seat shells share one immutable authored geometry during construction;
+static batching still applies every seat transform/material exactly as before instead
+of regenerating the same manufactured mesh hundreds of times. Arrival uses the shared
 camera-side placement and camera-facing rest pose. Reset stays in Soccer and
 resets the score, ball and goalkeeper state.
 

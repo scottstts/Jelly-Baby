@@ -6,7 +6,7 @@ import { RefractiveLightField } from '../graphics/optics/refractive-light.js';
 import { CausticReceivers } from '../graphics/optics/caustic-receivers.ts';
 import { Baby, ABSORPTION } from '../graphics/character/baby.ts';
 import { loadEnvironment } from '../graphics/scene/environment.ts';
-import { makeTable } from '../graphics/scene/table.ts';
+import { loadTableTextures, makeTable } from '../graphics/scene/table.ts';
 import { Locomotion } from './locomotion.ts';
 import { Input } from './input.ts';
 import { JellySound } from './sound.ts';
@@ -38,16 +38,18 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   scene.background=new THREE.Color('#e8d9c3');scene.fog=new THREE.Fog('#e8d9c3',2,12);
   const camera=new THREE.PerspectiveCamera(36,1,.001,40);
   camera.position.set(.111,.170,.256);
-  stage('Reading the light');
-  const environment=await loadEnvironment(renderer,scene);
+  stage('Loading the little room');
+  const [environment,cage,tableTextures]=await Promise.all([
+    loadEnvironment(renderer,scene),loadBabyCage(),loadTableTextures(),
+  ]);
   stage('Making a little jelly');
-  const body=new SoftBody(await loadBabyCage());
+  const body=new SoftBody(cage);
   const baby=new Baby(body);scene.add(baby.group);
   const optics=new RefractiveLightField(body.cage.opticalSurface,environment.incoming,ABSORPTION);
   const caustics=new CausticReceivers(optics,environment);
   const facilityShadows=new FacilityShadows(environment.incoming,environment.windowFraction,caustics);
   facilityShadows.surfaces.addBaby(baby.mesh);
-  const table=await makeTable(optics,environment,facilityShadows,caustics);scene.add(table.mesh);
+  const table=makeTable(optics,environment,facilityShadows,caustics,tableTextures);scene.add(table.mesh);
   const composite=createComposite(renderer,scene,camera);
   const rig=new Locomotion(body);
   const facilities=new Facilities(body);

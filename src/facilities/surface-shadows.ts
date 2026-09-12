@@ -29,6 +29,11 @@ export class SurfaceShadows {
   private babyDirty=true;
   private readonly windowFraction=uniform(0);
 
+  private visible(object:THREE.Object3D) {
+    for(let current:THREE.Object3D|null=object;current;current=current.parent)if(!current.visible)return false;
+    return true;
+  }
+
   constructor(incoming:THREE.Vector3,windowFraction:number) {
     this.windowFraction.value=windowFraction;
     this.directionNode=uniform(incoming.clone().negate());
@@ -84,7 +89,12 @@ export class SurfaceShadows {
 
   /** Update every registered root once; facility ground shadows can share this pass. */
   syncWorldMatrices() {
-    for(const root of this.roots)root.updateWorldMatrix(true,true);
+    // Lazy-loaded worlds remain attached to the main scene after travel. Their
+    // matrices are irrelevant while an ancestor is hidden, and recursively
+    // updating those inactive scene graphs every rendered frame only burns CPU.
+    // The first update after a world becomes visible synchronizes the complete
+    // subtree before any shadow proxy reads its matrixWorld.
+    for(const root of this.roots)if(this.visible(root))root.updateWorldMatrix(true,true);
     return ++this.worldSyncRevision;
   }
 
@@ -181,13 +191,19 @@ export class SurfaceShadows {
   update(renderer:THREE.WebGPURenderer,syncedRevision=-1) {
     if(syncedRevision!==this.worldSyncRevision)this.syncWorldMatrices();
     for(const caster of this.casters) {
-      let visible=true;
-      for(let object:THREE.Object3D|null=caster.source;object;object=object.parent)visible&&=object.visible;
+      const visible=this.visible(caster.source),visibilityChanged=caster.proxy.visible!==visible;
+      if(!visible) {
+        if(visibilityChanged) {
+          caster.proxy.visible=false;
+          for(const receiver of this.receiverDepths)if(receiver.source===caster.source){receiver.proxy.visible=false;receiver.dirty=false;}
+          if(caster.proxy.parent===this.facilities)this.facilityDirty=true;else this.babyDirty=true;
+        }
+        continue;
+      }
       const position=caster.source.geometry.attributes.position;
       const version=position instanceof THREE.InterleavedBufferAttribute?position.data.version:position.version;
       const geometryChanged=version!==caster.version;
       const transformChanged=!caster.proxy.matrix.equals(caster.source.matrixWorld);
-      const visibilityChanged=caster.proxy.visible!==visible;
       if(!geometryChanged&&!transformChanged&&!visibilityChanged)continue;
       caster.version=version;
       if(transformChanged){caster.proxy.matrix.copy(caster.source.matrixWorld);caster.proxy.matrixWorldNeedsUpdate=true;}

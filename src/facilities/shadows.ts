@@ -133,13 +133,17 @@ export class FacilityShadows {
     const worldSyncRevision=this.surfaces.syncWorldMatrices();
     for(const field of this.receiverFields.values())field.update(renderer);
     for(const caster of this.casters) {
+      const visible=this.visible(caster.source),visibilityChanged=caster.shadow.visible!==visible;
+      if(!visible) {
+        if(visibilityChanged) {
+          caster.shadow.visible=false;caster.contact.visible=false;this.targetDirty=true;
+        }
+        continue;
+      }
       const position=caster.source.geometry.attributes.position;
       const positionVersion=position instanceof THREE.InterleavedBufferAttribute?position.data.version:position.version;
       if(positionVersion!==caster.positionVersion){caster.positionVersion=positionVersion;this.targetDirty=true;}
       const transformChanged=!caster.matrix.equals(caster.source.matrixWorld);
-      let visible=true;
-      for(let object:THREE.Object3D|null=caster.source;object;object=object.parent)visible&&=object.visible;
-      const visibilityChanged=caster.shadow.visible!==visible;
       if(transformChanged||visibilityChanged||caster.projectionVersion!==this.projectionVersion) {
         caster.matrix.copy(caster.source.matrixWorld);
         caster.shadow.matrix.multiplyMatrices(this.projection,caster.matrix);

@@ -8,8 +8,14 @@ export function surfaceGrab(body:SoftBody,face:{a:number;b:number;c:number},poin
   const bary=tri.getBarycoord(point,new Vector3());
   if(!bary)return null;
   const weights=new Map<number,number>();
-  for(const [surfaceId,w] of [[a,bary.x],[b,bary.y],[c,bary.z]])
-    for(const [id,value] of body.surface.stencils[surfaceId])weights.set(id,(weights.get(id)||0)+w*value);
+  const ids=body.surface.bindingIds,values=body.surface.bindingWeights;
+  for(const [surfaceId,w] of [[a,bary.x],[b,bary.y],[c,bary.z]]) {
+    const offset=surfaceId*4;
+    for(let k=0;k<4;k++) {
+      const id=ids[offset+k],value=values[offset+k];
+      weights.set(id,(weights.get(id)||0)+w*value);
+    }
+  }
   const list=[...weights].filter(([,w])=>w>1e-12),sum=list.reduce((total,[,w])=>total+w,0);
   if(!Number.isFinite(sum)||sum<=0)return null;
   list.forEach(pair=>pair[1]/=sum);

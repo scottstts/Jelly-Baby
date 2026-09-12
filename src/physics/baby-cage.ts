@@ -12,10 +12,6 @@ export function parseBabyCage(buffer:ArrayBuffer,manifest:ModelManifest) {
   const u32=(name:string)=>new Uint32Array(buffer,manifest.layout[name].offset,manifest.layout[name].length);
   const positions=f32('positions').slice(),normals=f32('normals'),indices=u32('indices');
   const bindingIds=u32('bindingIds'),bindingWeights=f64('bindingWeights');
-  const stencils:[number,number][][]=[];
-  for(let i=0;i<positions.length/3;i++) {
-    stencils.push(Array.from({length:4},(_,k)=>[bindingIds[i*4+k],bindingWeights[i*4+k]] as [number,number]));
-  }
   const geometry=new BufferGeometry();
   geometry.setAttribute('position',new BufferAttribute(positions,3).setUsage(DynamicDrawUsage));
   geometry.setAttribute('normal',new BufferAttribute(normals.slice(),3).setUsage(DynamicDrawUsage));
@@ -28,10 +24,15 @@ export function parseBabyCage(buffer:ArrayBuffer,manifest:ModelManifest) {
   opticalGeometry.setAttribute('normal',new BufferAttribute(opticalNormals.slice(),3));
   opticalGeometry.setAttribute('opticalThickness',new BufferAttribute(new Float32Array(opticalPositions.length/3).fill(.04),1));
   opticalGeometry.setIndex(new BufferAttribute(u32('opticalIndices'),1));opticalGeometry.computeBoundingBox();
+  const contacts=u32('contacts');
+  const contactBindings=Array.from(contacts,id=>{
+    const offset=id*4;
+    return Array.from({length:4},(_,k)=>[bindingIds[offset+k],bindingWeights[offset+k]] as [number,number]);
+  });
   return {
     pos:f64('particles'),tets,volumes:f64('volumes'),totalVolume:manifest.volume,
-    contactBindings:Array.from(u32('contacts'),id=>stencils[id]),
-    surface:{geometry,positions,indices,stencils,bindingIds,bindingWeights,restNormals:normals,tetIds:u32('tetIds')},
+    contactBindings,
+    surface:{geometry,positions,indices,bindingIds,bindingWeights,restNormals:normals,tetIds:u32('tetIds')},
     opticalSurface:{geometry:opticalGeometry,positions:opticalPositions,indices:u32('opticalIndices'),restNormals:opticalNormals,
       bindingIds:u32('opticalBindingIds'),bindingWeights:f64('opticalBindingWeights')},
     thicknessIds:u32('thicknessIds'),thicknessWeights:f32('thicknessWeights'),

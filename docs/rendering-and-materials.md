@@ -27,10 +27,14 @@ facility interaction, orbiting, and dragging.
 
 [`render-warmup.ts`](../src/graphics/scene/render-warmup.ts) wraps the main-scene
 `compileAsync` call. During that call only, it exposes hidden objects and disables
-frustum culling for every traversed object, then restores the exact original
+frustum culling for the world being warmed, then restores the exact original
 flags in `finally`. This ensures rear-room facilities and later-visible effects
 receive their WebGPU pipelines while the loading UI is still active rather than
-on the first gameplay frame that brings them into view. The helper does not alter
+on the first gameplay frame that brings them into view. Lazy destinations compile
+once on first entry. Already-warmed inactive world roots remain hidden during a
+new destination compile, while the root scene is still used so fog/environment
+shader context matches gameplay. Every transition still performs a hidden render
+and GPU queue fence before the loading overlay closes. The helper does not alter
 normal render culling, visibility, materials, or collision behavior.
 
 ## Drawing-buffer and camera sizing
@@ -64,7 +68,9 @@ PMREM environment texture for image-based lighting.
 [`src/graphics/scene/studio-light.ts`](../src/graphics/scene/studio-light.ts) reorients the
 photographed window to the project's elevated key direction, applies a broad
 gain to the key and a reduced fill to the rest of the room, and writes a new
-half-float HDR image. `measureWindow` then integrates that edited image to
+half-float HDR image. The preprocessing uses allocation-bounded typed scratch
+buffers and scalar sampling but preserves the edited half-float output exactly.
+`measureWindow` then integrates that edited image to
 derive the direction, color, irradiance, and window fraction used by the table,
 shadow, and optical systems. This keeps the visible environment and measured
 light source from disagreeing.
@@ -74,7 +80,9 @@ window occlusion and transmitted flux are added as a measured local correction,
 not as a second point or directional light that would double the window.
 
 Raised surfaces use separate light-space depth maps for facilities and the
-deformed jelly. Visibility enters the physical material's `aoNode` as a
+deformed jelly. Hidden lazy-world roots are skipped by shadow world-matrix and
+caster synchronization; their complete subtree is synchronized on the first
+visible update after travel. Visibility enters the physical material's `aoNode` as a
 normal-weighted approximation of the blocked window contribution. Three applies
 this to indirect diffuse, specular, and clearcoat lighting; the final output and
 transmitted background are not multiplied by a shadow mask. This preserves the

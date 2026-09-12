@@ -43,6 +43,7 @@ export class WorldTravel {
   private readonly camera:PerspectiveCamera;
   private readonly stage:(s:string)=>void;
   private readonly fail:(e:unknown)=>void;
+  private readonly warmedWorlds=new Set<WorldId>(['home']);
   onMove:()=>void=()=>{};
   onMenuOpen:()=>void=()=>{};
   onReady:()=>void|Promise<void>=()=>{};
@@ -94,7 +95,12 @@ export class WorldTravel {
     return true;
   }
   onMenuClose:()=>void=()=>{};
-  update(dt:number) {(this.inSoccer?this.soccerPortal:this.inToys?this.returnPortal:this.homePortal)?.update(dt);if(this.inSoccer)this.soccer?.updateFrame(dt);this.soccer?.updateOptics(this.renderer,this.inSoccer);}
+  update(dt:number) {
+    (this.inSoccer?this.soccerPortal:this.inToys?this.returnPortal:this.homePortal)?.update(dt);
+    // The transition path disables Soccer optics before hiding that world, so
+    // inactive worlds need no per-frame uniform/optical bookkeeping afterward.
+    if(this.inSoccer){this.soccer?.updateFrame(dt);this.soccer?.updateOptics(this.renderer,true);}
+  }
   private async travel(destination:WorldId) {
     this.loading=true;this.onMove();
     document.querySelector('#loading')!.classList.remove('hidden');
@@ -113,10 +119,12 @@ export class WorldTravel {
       this.toyFacilities.warmupCollisions();
     }
     if(destination==='soccer'&&!this.soccer) {
-      const {SoccerFacility}=await import('./soccer/facility.ts');if(this.disposed)return;
-      const {disposeGrassTextures,loadGrassTextures}=await import('./soccer/turf.ts');
-      const grass=await loadGrassTextures();
-      if(this.disposed){disposeGrassTextures(grass);return;}
+      const [facilityModule,turfLoad]=await Promise.all([
+        import('./soccer/facility.ts'),
+        import('./soccer/turf.ts').then(async module=>({module,grass:await module.loadGrassTextures()})),
+      ]);
+      const {SoccerFacility}=facilityModule,{module:turf,grass}=turfLoad;
+      if(this.disposed){turf.disposeGrassTextures(grass);return;}
       this.soccer=new SoccerFacility(this.soccerWorld,this.body,this.shadows,grass,{camera:this.camera,fail:this.fail});this.soccerFacilities.add(this.soccer);
       this.soccerPortal=new JellyPortal(SOCCER_PORTAL.x,SOCCER_PORTAL.z);this.soccerWorld.add(this.soccerPortal.group);this.shadows.add(this.soccerPortal.group,this.soccerPortal.lightingEnvelope);
       this.soccerPortalFacility=new PortalFacility(this.body,'soccer-portal-housing',SOCCER_PORTAL.x,SOCCER_PORTAL.z,this.soccerPortal.collisionBoxes,()=>this.requestTravel(),()=>this.portalAvailable());
@@ -134,7 +142,16 @@ export class WorldTravel {
     this.soccer?.updateFrame(0);this.soccer?.updateOptics(this.renderer,this.inSoccer);
     const shadowRevision=this.shadows.update(this.renderer);
     this.shadows.surfaces.update(this.renderer,shadowRevision);
-    await warmMainScenePipelines(this.renderer,this.scene,this.camera);
+    // A destination's complete scene graph is exposed to compileAsync on its
+    // first visit. Nothing is created lazily inside an already-built world, so
+    // recompiling the same graph on every return only extends the loading card
+    // without making gameplay any warmer.
+    if(!this.warmedWorlds.has(destination)) {
+      const destinationScene=this.inSoccer?this.soccerWorld:this.inToys?this.toys:this.home;
+      const preserveVisibility=new Set([this.home,this.toys,this.soccerWorld].filter(world=>world!==destinationScene));
+      await warmMainScenePipelines(this.renderer,this.scene,this.camera,{preserveVisibility});
+      this.warmedWorlds.add(destination);
+    }
     if(this.disposed)return;
     this.renderer.render(this.scene,this.camera);
     await (this.renderer.backend as unknown as {device:GPUDevice}).device.queue.onSubmittedWorkDone();

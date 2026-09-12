@@ -38,6 +38,16 @@ function tree() {
   assert.equal('visible' in fixture.plain,false);assert.equal('frustumCulled' in fixture.plain,false);
 }
 
+
+{
+  const fixture=tree();let hiddenDuringCompile;
+  const renderer={async compileAsync(){hiddenDuringCompile=fixture.hidden.visible;}};
+  await warmMainScenePipelines(renderer,fixture.scene,{}, {preserveVisibility:new Set([fixture.hidden])});
+  assert.equal(hiddenDuringCompile,false,'already-warmed hidden roots stay excluded from destination compilation');
+  assert.equal(fixture.hidden.visible,false,'preserved hidden root remains hidden after warmup');
+  assert.equal(fixture.offscreen.frustumCulled,true,'ordinary warmup flags still restore');
+}
+
 {
   const fixture=tree();
   const renderer={async compileAsync(){throw new Error('synthetic compile failure');}};

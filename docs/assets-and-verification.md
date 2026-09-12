@@ -6,6 +6,16 @@ source and the verification suite exercises the same modules used by the game.
 
 ## Repository assets
 
+
+The five assets required by every initial playable frame (`bg_room.exr`, the jelly
+binary, and the three wood maps) are declared as HTML preloads. Runtime startup also
+awaits the environment, model, and table texture set concurrently. Optional night and
+Soccer assets are intentionally excluded so they do not compete with first-entry data.
+The packed jelly parser keeps the full-resolution binding typed arrays and builds
+small contact binding objects only for authored contact vertices; grab interpolation
+reads the same binding arrays directly instead of materializing per-vertex stencil
+objects for all 72,234 visible vertices.
+
 The toy world and tricycle use authored procedural meshes, with no new texture
 downloads. `npm run test:tricycle` covers drive, soft-body coupling, crash faces,
 steering links and geometry budgets. `npm run test:world-travel` uses a renderer

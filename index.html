@@ -6,6 +6,14 @@
     <link rel="canonical" href="https://jelly.scottsun.io" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#e8d9c3" />
+    <!-- Every item below is mandatory for the first playable frame. Discover
+         them before the module graph/WebGPU initialization so transfer/decode
+         overlaps boot instead of starting only after renderer creation. -->
+    <link rel="preload" href="/src/assets/bg_room.exr" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/src/assets/model/jelly-baby.bin" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="/src/assets/wood_texture/wood_base.jpg" as="image" crossorigin="anonymous" />
+    <link rel="preload" href="/src/assets/wood_texture/wood_normal.png" as="image" crossorigin="anonymous" />
+    <link rel="preload" href="/src/assets/wood_texture/wood_roughness.jpg" as="image" crossorigin="anonymous" />
     <meta name="description" content="A small, soft world. Wander, hop, stretch, and let go." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://jelly.scottsun.io" />

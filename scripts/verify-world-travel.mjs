@@ -59,7 +59,7 @@ const bike=worlds.tricycle;assert(bike);
 place(TRACK_PORTAL.x,TRACK_PORTAL.z+.01);worlds.step(.01);assert.equal(moves,1,'arrival cooldown prevents bounce-back');assert.equal(worlds.portalFacility.interactionDistance,Infinity,'arrival cooldown hides the portal affordance');
 worlds.step(1.1);assert(Number.isFinite(worlds.portalFacility.interactionDistance));assert(worlds.portalFacility.interact(),'return portal opens destinations');elements.find(e=>e.textContent==='Home').click();await waitForTravel();
 assert(!worlds.inToys&&home.enabled&&!worlds.toyFacilities.enabled);
-assert.equal(compiles,2);assert.equal(renders,2);assert.equal(ready,2);
+assert.equal(compiles,1,'the already-warmed home scene does not recompile on return');assert.equal(renders,2);assert.equal(ready,2);
 place(HOME_PORTAL.x,HOME_PORTAL.z-.01);worlds.step(1.1);assert(worlds.portalFacility.interact(),'later portal visits reuse the facility');elements.find(e=>e.textContent==='Play Tricycle').click();await waitForTravel();
 assert(worlds.inToys);assert.equal(worlds.tricycle,bike,'later visits reuse geometry');
 bike.physics.speed=.2;worlds.reset();assert.equal(bike.physics.speed,0);assert(worlds.inToys,'reset stays in selected world');
@@ -74,5 +74,6 @@ for(const detail of soccer.goalie.face.details.filter(d=>d.kind==='eye')) {
 soccer.physics.score=3;worlds.reset();assert(worlds.inSoccer&&!soccer.active&&soccer.physics.score===0);
 place(SOCCER_PORTAL.x,SOCCER_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Home').click();await waitForTravel();assert.equal(worlds.current,'home');
 place(HOME_PORTAL.x,HOME_PORTAL.z+.01);worlds.step(1.1);worlds.portalFacility.interact();elements.find(e=>e.textContent==='Play Soccer').click();await waitForTravel();assert.equal(worlds.soccer,soccer,'soccer geometry reuses its first build');
+assert.equal(compiles,2,'each lazy destination compiles exactly once');assert.equal(renders,6,'every transition still receives a hidden first render');assert.equal(ready,6);
 worlds.dispose();home.dispose();assert.equal(scene.children.length,0);
 console.log('Portal aperture, camera-side arrival and facing, persistent equipment, loading, round trip, ownership, arrival cooldown, reuse, reset and disposal passed.');

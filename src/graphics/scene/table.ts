@@ -4,8 +4,9 @@ import type { RefractiveLightField } from '../optics/refractive-light.js';
 import type { CausticReceivers } from '../optics/caustic-receivers.ts';
 import type { FacilityShadows } from '../../facilities/shadows.ts';
 
-export async function makeTable(_optics:RefractiveLightField,light:{color:THREE.Color;windowFraction:number;irradiance:number},facilities:FacilityShadows,caustics:CausticReceivers) {
-  const fraction=uniform(light.windowFraction);
+export type TableTextures={base:THREE.Texture;normal:THREE.Texture;roughness:THREE.Texture};
+
+export async function loadTableTextures():Promise<TableTextures> {
   const loader=new THREE.TextureLoader();
   const urls=[new URL('../../assets/wood_texture/wood_base.jpg',import.meta.url).href,
     new URL('../../assets/wood_texture/wood_normal.png',import.meta.url).href,
@@ -13,6 +14,12 @@ export async function makeTable(_optics:RefractiveLightField,light:{color:THREE.
   const [base,normal,roughness]=await Promise.all(urls.map(url=>loader.loadAsync(url)));
   base.colorSpace=THREE.SRGBColorSpace;
   for(const t of [base,normal,roughness]) {t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;}
+  return {base,normal,roughness};
+}
+
+export function makeTable(_optics:RefractiveLightField,light:{color:THREE.Color;windowFraction:number;irradiance:number},facilities:FacilityShadows,caustics:CausticReceivers,textures:TableTextures) {
+  const fraction=uniform(light.windowFraction);
+  const {base,normal,roughness}=textures;
   const uv=positionWorld.xz.div(2.5).add(.5);
   const albedo=texture(base,uv).rgb;
   const material=new THREE.MeshPhysicalNodeMaterial({metalness:0,roughness:.26,clearcoat:.38,clearcoatRoughness:.23});

@@ -45,12 +45,16 @@ it off reparents the item to its original slot on the hidden dressing table so i
 is waiting there on return. Reset stays in the current world.
 
 The toy and soccer worlds are imported and built on their first passage. The existing loading
-screen paints before construction, collision warmup and shader compilation.
-Physics pauses; the destination receives a first render and GPU completion
-fence before the overlay closes. Failures use the existing terminal error UI
-with the transition stage. Later passages reuse geometry; disposal releases
-all worlds. Soccer follows the same arrival, reset, persistent-attire and
-lighting contracts; see [Soccer world](soccer-world.md) for placement and access.
+screen paints before construction, collision warmup and first-visit shader compilation.
+Soccer starts its facility-module load and grass-texture load concurrently. Physics
+pauses; the destination receives a hidden first render and GPU completion fence
+before the overlay closes. Each fully built destination compiles only once; later
+passages reuse both geometry and hot pipelines while retaining the hidden render/fence.
+When a new destination compiles, already-warmed inactive world roots stay hidden so
+they do not re-enter the compile candidate set. Failures use the existing terminal
+error UI with the transition stage. Disposal releases all worlds. Soccer follows the
+same arrival, reset, persistent-attire and lighting contracts; see
+[Soccer world](soccer-world.md) for placement and access.
 
 Shadow proxies respect inherited world visibility. Both portal housings are
 registered as ordinary facility-lighting participants: their complete static
@@ -71,6 +75,10 @@ destination dial and small status windows because travel works from either side.
 PBR enamel, satin metal and matte rubber separate the manufactured surfaces.
 Only the opaque, double-sided TSL membrane animates; hardware stays fixed.
 Static parts batch by finish, with no scene capture, particles or extra lights.
+The shared batcher preserves authored indices instead of expanding indexed meshes
+to duplicate triangle vertices, so unchanged geometry can retain lower vertex traffic.
+Repeated identical house/tree/flag shells are constructed once and transformed into
+the batch rather than rerunning procedural geometry generation for every copy.
 The geometry verification keeps the named assembly audit before batching and
 checks the emitted batched surfaces again for z-fighting and topology defects.
 The housing is also a static facility collision assembly: a segmented annulus

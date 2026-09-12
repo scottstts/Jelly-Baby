@@ -25,6 +25,11 @@ export class SoccerStadium {
     this.grass=grass;
     this.group.name='soccer-stadium';this.staticParts.name='stadium-parts';this.staticParts.userData.keepParts=keepParts;this.group.add(this.staticParts);
     const cream=enamel(0xf5e6c5,.33),blue=enamel(0x23559c,.29),seatBlue=enamel(0x4688c8,.4),gold=enamel(0xeabf57,.34),coral=enamel(0xdb6755),net=enamel(0xe9e2cd,.7);
+    // Every molded seat is the same manufactured shell. Share the authored
+    // geometry and vary only the mesh transform/material; rebuilding the bevel,
+    // cleanup and smoothing pipeline hundreds of times adds seconds to the
+    // first Soccer load without adding any geometric detail.
+    const seatShell=this.seatGeometry();
     const addBox=(name:string,size:number[],x:number,y:number,z:number,material:T.Material=cream,r=.004,collision=false,cameraObstacle=false)=>{
       const mesh=part(this.staticParts,moldedBox(size,r),material,x,y,z);mesh.name=name;
       if(collision){const box=soccerBox(x,y,z,...size as [number,number,number]);this.boxes.push(box);if(cameraObstacle)this.cameraObstacles.push(box);}return mesh;
@@ -45,7 +50,7 @@ export class SoccerStadium {
         for(let seat=0;seat<36;seat++) {
           if(seat%10===0)continue; // Four clear aisle lanes.
           const x=side*(inner+.034),z=-1.52+seat*.087;
-          const shell=part(this.staticParts,this.seatGeometry(),row%2?blue:seatBlue,x,y-.003,z);shell.rotation.y=side*Math.PI/2;shell.name=`side-seat-${side}-${row}-${seat}`;
+          const shell=part(this.staticParts,seatShell,row%2?blue:seatBlue,x,y-.003,z);shell.rotation.y=side*Math.PI/2;shell.name=`side-seat-${side}-${row}-${seat}`;
           this.seatCollision(x,y-.003,z,shell.rotation.y);
         }
         for(let aisle=0;aisle<4;aisle++)addBox(`side-step-${side}-${row}-${aisle}`,[.061,.004,.032],side*(inner+.036),y+.002,-1.52+aisle*.87,gold,.001);
@@ -70,7 +75,7 @@ export class SoccerStadium {
           const count=Math.floor(bank.width/.087);
           for(let seat=0;seat<count;seat++) {
             if(seat%8===0)continue;
-            const shell=part(this.staticParts,this.seatGeometry(),row%2?seatBlue:blue,bank.x-bank.width/2+.045+seat*.087,y-.001,z);
+            const shell=part(this.staticParts,seatShell,row%2?seatBlue:blue,bank.x-bank.width/2+.045+seat*.087,y-.001,z);
             shell.rotation.y=end===-1?Math.PI:0;shell.name=`end-seat-${end}-${section}-${row}-${bankIndex}-${seat}`;
             this.seatCollision(shell.position.x,shell.position.y,shell.position.z,shell.rotation.y);
           }

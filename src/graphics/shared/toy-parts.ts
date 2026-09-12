@@ -25,7 +25,18 @@ export function batch(root:T.Group) {
   root.updateWorldMatrix(true,true);const inverse=root.matrixWorld.clone().invert(),buckets=new Map<T.Material,T.BufferGeometry[]>();
   root.traverse(o=>{if(o instanceof T.Mesh&&!Array.isArray(o.material)){
     const list=buckets.get(o.material)??[];
-    const geometry=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
+    // Keep authored indices. Expanding every source to non-indexed triangles
+    // duplicates vertex data, makes large static assemblies expensive to build,
+    // and increases the final GPU vertex workload without changing appearance.
+    // Give the few non-indexed sources a one-to-one index instead so a bucket
+    // can still be merged by BufferGeometryUtils with identical attributes.
+    const geometry=o.geometry.clone();
+    if(!geometry.index) {
+      const count=geometry.getAttribute('position').count;
+      const Index=count>65535?Uint32Array:Uint16Array,index=new Index(count);
+      for(let i=0;i<count;i++)index[i]=i;
+      geometry.setIndex(new T.BufferAttribute(index,1));
+    }
     list.push(geometry.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,o.matrixWorld)));buckets.set(o.material,list);o.geometry.dispose();
   }});root.clear();
   for(const [material,geometries] of buckets){const merged=mergeGeometries(geometries);if(!merged)throw new Error('Toy assembly could not be batched');part(root,merged,material);geometries.forEach(g=>g.dispose());}

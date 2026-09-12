@@ -6,7 +6,7 @@ import {
 } from '../layout.ts';
 import { TRACK_PORTAL } from '../portal-layout.ts';
 import { makeToyRoad } from './road.ts';
-import { turned } from '../../../graphics/shared/manufactured-geometry.ts';
+import { moldedBox, turned } from '../../../graphics/shared/manufactured-geometry.ts';
 import type { CollisionBox } from '../../../facilities/collision.ts';
 import { tricycleBoxCollider, tricycleCircleCollider, type TricycleCollider } from '../facilities/tricycle/collision.ts';
 
@@ -36,6 +36,23 @@ export class ToyTrack {
   constructor(keepParts=false) {
     this.group.name='toy-track';this.group.userData.keepParts=keepParts;
     const coral=enamel(0xe7917f),cream=enamel(0xffecc5),ink=enamel(0x38555b),gold=enamel(0xd8b36c);
+    // Repeated manufactured pieces are geometrically identical. Build each
+    // immutable shell once and let the static batcher clone/apply transforms.
+    // This removes procedural mesh cleanup/smoothing work without changing any
+    // vertices, materials, placement, collision, or rendered detail.
+    const houseWall=moldedBox([.069,.050,.056],.003);
+    const chimney=moldedBox([.012,.018,.012],.002);
+    const houseDoor=moldedBox([.013,.026,.002],.002);
+    const houseWindow=moldedBox([.013,.014,.002],.002);
+    const windowBar=moldedBox([.001,.014,.0005],.002);
+    const steppingStone=moldedBox([.014,STEP_HEIGHT,.010],.003);
+    const roofShape=new T.Shape();roofShape.moveTo(-.041,0);roofShape.lineTo(0,.030);roofShape.lineTo(.041,0);roofShape.closePath();
+    const houseRoof=new T.ExtrudeGeometry(roofShape,{depth:.067,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.001,bevelThickness:.001});
+    const treeTrunk=new T.CylinderGeometry(.002,.003,.026,8);
+    const treeCrown=new T.SphereGeometry(.014,12,8);
+    const treePlinth=new T.CylinderGeometry(.013,.015,.004,12);
+    const flagShape=new T.Shape();flagShape.moveTo(-.008,0);flagShape.lineTo(.008,0);flagShape.lineTo(0,-.018);flagShape.closePath();
+    const flagGeometry=new T.ShapeGeometry(flagShape);
     makeToyRoad(this.group);
     this.makeWalkingCurbs();
     const tangent=trackCurve.getTangentAt(0);
@@ -79,16 +96,15 @@ export class ToyTrack {
     for(const [baseX,baseZ,color] of [[-.12,-.08,0xe4b370],[.035,-.13,0xc78582],[.17,.04,0x80aaa0],[-.14,.13,0x81a6bd]]) {
       const x=baseX*TRACK_SCENERY_SCALE,z=baseZ*TRACK_SCENERY_SCALE;
       const g=new T.Group();g.name='scaled-infield-house';g.position.set(x,0,z);g.scale.setScalar(TRACK_SCENERY_SCALE);this.group.add(g);
-      const walls=enamel(color);rounded(g,[.069,.050,.056],walls,0,.025,0,.003);
-      const roof=new T.Shape();roof.moveTo(-.041,0);roof.lineTo(0,.030);roof.lineTo(.041,0);roof.closePath();
-      const roofMesh=part(g,new T.ExtrudeGeometry(roof,{depth:.067,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.001,bevelThickness:.001}),red,0,.05,-.0335);
-      roofMesh.name='painted pitched roof';rounded(g,[.012,.018,.012],cream,.023,.066,-.012);
-      rounded(g,[.013,.026,.002],ink,0,.014,.029);
-      for(const side of [-1,1]){rounded(g,[.013,.014,.002],cream,side*.023,.031,.029);rounded(g,[.001,.014,.0005],gold,side*.023,.031,.0305);}
+      const walls=enamel(color);part(g,houseWall,walls,0,.025,0);
+      const roofMesh=part(g,houseRoof,red,0,.05,-.0335);
+      roofMesh.name='painted pitched roof';part(g,chimney,cream,.023,.066,-.012);
+      part(g,houseDoor,ink,0,.014,.029);
+      for(const side of [-1,1]){part(g,houseWindow,cream,side*.023,.031,.029);part(g,windowBar,gold,side*.023,.031,.0305);}
       const houseBox=box(x,.041*TRACK_SCENERY_SCALE,z,.083*TRACK_SCENERY_SCALE,.082*TRACK_SCENERY_SCALE,.07*TRACK_SCENERY_SCALE);
       this.boxes.push(houseBox);this.obstacleBoxes.push(houseBox);this.vehicleColliders.push(tricycleBoxCollider(houseBox));
       for(let i=0;i<4;i++) {
-        const stone=rounded(this.group,[.014,STEP_HEIGHT,.010],cream,x,TOY_FLOOR_CLEARANCE+STEP_HEIGHT/2,z+(.044+i*.015)*TRACK_SCENERY_SCALE,.003);
+        const stone=part(this.group,steppingStone,cream,x,TOY_FLOOR_CLEARANCE+STEP_HEIGHT/2,z+(.044+i*.015)*TRACK_SCENERY_SCALE);
         stone.name='house stepping stone';
       }
     }
@@ -102,9 +118,9 @@ export class ToyTrack {
       if(p.distanceTo(portalPosition)<.30)continue;
       const treeScale=infield?TRACK_SCENERY_SCALE:1;
       const tree=new T.Group();tree.name=infield?'scaled-infield-tree':'trackside-tree';tree.position.set(p.x,TOY_FLOOR_CLEARANCE,p.z);tree.scale.setScalar(treeScale);this.group.add(tree);
-      part(tree,new T.CylinderGeometry(.002,.003,.026,8),gold,0,.013,0);
-      part(tree,new T.SphereGeometry(.014,12,8),i%2?blue:coral,0,.034,0).scale.set(.8,1.4,.8);
-      part(tree,new T.CylinderGeometry(.013,.015,.004,12),cream,0,.002,0).name='tree-plinth';
+      part(tree,treeTrunk,gold,0,.013,0);
+      part(tree,treeCrown,i%2?blue:coral,0,.034,0).scale.set(.8,1.4,.8);
+      part(tree,treePlinth,cream,0,.002,0).name='tree-plinth';
       // A single vertical envelope covers the plinth, trunk and oval crown.
       // This is intentionally much cheaper than matching the low-poly mesh and
       // belongs only to jelly collision; the road constraint already keeps the
@@ -120,8 +136,8 @@ export class ToyTrack {
     }
     const a=trackPoint(0,-gantryOffset).setY(.137),b=trackPoint(0,gantryOffset).setY(.137);rod(this.group,a,b,.0008,rubber);
     for(let i=0;i<9;i++) {
-      const p=a.clone().lerp(b,(i+.5)/9);const shape=new T.Shape();shape.moveTo(-.008,0);shape.lineTo(.008,0);shape.lineTo(0,-.018);shape.closePath();
-      const flag=part(this.group,new T.ShapeGeometry(shape),i%2?coral:cream,p.x,p.y,p.z);flag.material.side=T.DoubleSide;flag.rotation.y=Math.atan2(tangent.x,tangent.z);
+      const p=a.clone().lerp(b,(i+.5)/9);
+      const flag=part(this.group,flagGeometry,i%2?coral:cream,p.x,p.y,p.z);flag.material.side=T.DoubleSide;flag.rotation.y=Math.atan2(tangent.x,tangent.z);
     }
     batch(this.group);
   }

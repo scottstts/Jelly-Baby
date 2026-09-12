@@ -45,12 +45,14 @@ local `try` block still reaches the visible error card.
 
 `startGame` performs the following work in order:
 
-1. Create and initialize the WebGPU renderer.
-2. Append its canvas to `#viewport` and construct `JellySound` early so the
-   first user gesture can unlock Web Audio while the rest of the scene loads.
-3. Create the scene, camera, environment, soft body, baby, optical field, table,
-   composite pipeline, locomotion rig, facility manager, flavor picker, input,
-   and optical worker.
+1. `index.html` preloads the mandatory day HDR, jelly binary, and three wood
+   maps so their transfer/decode can overlap module and WebGPU startup.
+2. Create and initialize the WebGPU renderer, append its canvas to `#viewport`,
+   and construct `JellySound` early so the first user gesture can unlock Web
+   Audio while the rest of the scene loads.
+3. Load the environment, jelly cage, and table texture set concurrently. Build
+   the soft body, baby, optical field, table, composite pipeline, locomotion
+   rig, facility manager, flavor picker, input, and optical worker afterward.
 4. Attach reset, sound, facility, resize, and failure callbacks.
 5. Settle the body for 80 fixed steps before showing the first frame. This lets
    contact and posture establish without exposing the startup pose.
@@ -58,7 +60,7 @@ local `try` block still reaches the visible error card.
    and both bed blanket collision paths using non-mutating scratch work. This
    moves lazy native allocations and cold execution into the loading screen.
 7. Update the face, facility shadow field, caustics, and worker-backed
-   transport; precompile the entire main scene with visibility and frustum
+   transport; precompile the entire initially built scene with visibility and frustum
    rejection temporarily disabled, then restore those flags. This is required
    because Three r185's `compileAsync(scene, camera)` gathers candidates through
    the normal camera projection path, while the startup camera does not see the
