@@ -7,6 +7,7 @@ import { FIELD, GOAL, ENTRANCE, FIELD_RAMP, soccerBox } from './layout.ts';
 import type { CollisionBox } from '../../facilities/collision.ts';
 import { stadiumEntrance } from './entrance.ts';
 import { formedProfile } from './craft.ts';
+import { stadiumDetails } from './stadium-details.ts';
 import { createFallbackGrassTextures, disposeGrassTextures, turfMaterial, type GrassTextureSet } from './turf.ts';
 
 /** Named manufactured solids survive until audit; runtime batches by finish. */
@@ -100,11 +101,12 @@ export class SoccerStadium {
       this.digits.push(segments);
     }
     this.setScore(0);
+    stadiumDetails(this.staticParts,this.boxes,cream,blue,gold,coral);
     batch(this.staticParts);
   }
   private seatGeometry() {
     // One formed L shell, 3 mm thick, with a curved knee instead of intersecting boxes.
-    const profile=[[-.027,.003],[.014,.003],[.020,.006],[.024,.012],[.027,.039],[.024,.040],[.021,.013],[.017,.008],[.012,.006],[-.027,.006]];
+    const profile=[[-.027,.003],[-.009,.0026],[.010,.003],[.016,.004],[.020,.006],[.023,.010],[.0245,.015],[.027,.035],[.0267,.039],[.0255,.0405],[.024,.040],[.0235,.036],[.0215,.016],[.020,.012],[.017,.009],[.013,.007],[-.009,.006],[-.024,.007],[-.027,.006]];
     return formedProfile(profile,.054,.0006);
   }
   private seatCollision(x:number,y:number,z:number,yaw:number) {
@@ -123,8 +125,8 @@ export class SoccerStadium {
     const w=GOAL.width/2,h=GOAL.height,y=FIELD.y,z=end*FIELD.length/2;
     part(this.staticParts,moldedBox([GOAL.width+.016,.010,GOAL.depth],.001),enamel(0x44843f,.75),0,.007,z+end*GOAL.depth/2).name=`goal-floor-${end}`;
     part(this.staticParts,moldedBox([GOAL.width+.016,.001,GOAL.depth],.0003),material,0,.0015,z+end*GOAL.depth/2).name=`goal-undertray-${end}`;
-    const frame=[[-w,y,z],[-w,y+h-.014,z],[-w+.004,y+h-.004,z],[-w+.014,y+h,z],[w-.014,y+h,z],[w-.004,y+h-.004,z],[w,y+h-.014,z],[w,y,z]];
-    part(this.staticParts,closedTube(frame.map(p=>new T.Vector3(...p)),GOAL.post,12),material).name=`goal-frame-${end}`;
+    const frame=[[-w,y,z],...Array.from({length:9},(_,i)=>{const a=Math.PI-i*Math.PI/16;return [-w+.014+.014*Math.cos(a),y+h-.014+.014*Math.sin(a),z];}),...Array.from({length:9},(_,i)=>{const a=Math.PI/2-i*Math.PI/16;return [w-.014+.014*Math.cos(a),y+h-.014+.014*Math.sin(a),z];}),[w,y,z]];
+    part(this.staticParts,closedTube(frame.map(p=>new T.Vector3(...p)),GOAL.post,16),material).name=`goal-frame-${end}`;
     for(let i=1;i<frame.length;i++) {
       const a=new T.Vector3(...frame[i-1]),b=new T.Vector3(...frame[i]),direction=b.clone().sub(a),center=a.clone().add(b).multiplyScalar(.5);
       const box=soccerBox(center.x,center.y,center.z,GOAL.post*2,direction.length()+.001,GOAL.post*2);

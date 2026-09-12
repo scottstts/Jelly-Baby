@@ -1,13 +1,26 @@
 import assert from 'node:assert/strict';
 import { Box3 } from 'three/webgpu';
 import { SoccerStadium } from '../src/worlds/soccer/stadium.ts';
-import { FIELD, ENTRANCE, GOAL, SOCCER_PORTAL } from '../src/worlds/soccer/layout.ts';
+import { FIELD, ENTRANCE, GOAL, SOCCER_PORTAL, SOCCER_ENVELOPE, WELCOME_DESK } from '../src/worlds/soccer/layout.ts';
 import { MeshData, cleanMesh } from './geometry-quality-kit/procedural-mesh.js';
 import { auditMeshData, auditTriangleSoup } from './geometry-quality-kit/mesh-topology-audit.js';
 import { auditGeometry, logAuditReport } from './geometry-quality-kit/geometry-audit.js';
 import { runGeometryContract, nearCheck, minimumCheck, assertGeometryContract } from './geometry-quality-kit/geometry-contract.js';
 
 const stadium=new SoccerStadium(true);let parts=0,triangles=0;
+const namedBounds=name=>{const mesh=stadium.group.getObjectByName(name);assert(mesh,`missing ${name}`);return new Box3().setFromObject(mesh);};
+const sign=namedBounds('entrance-sign-shell');
+assert(sign.min.z>ENTRANCE.z+.043&&sign.max.z<SOCCER_PORTAL.z-.05,'sign belongs between gate and portal');
+assert(Math.abs(sign.max.y-.075)<1e-6,'entrance marker tops out at 7.5 cm');
+assert(sign.max.x-sign.min.x<=.120001,'entrance marker is at most 12 cm wide');
+assert(sign.min.x>=ENTRANCE.x+ENTRANCE.width/2+.019,'whole sign stays beside the entry opening');
+assert(Math.abs((sign.min.x+sign.max.x)/2-WELCOME_DESK.x)<1e-6,'sign is centred in front of the welcome table');
+assert(namedBounds('entrance-sign-foot').min.z>namedBounds('welcome-top').max.z+.01,'sign foot clears the front of the table');
+for(const [a,b] of [['entrance-sign-foot','entrance-sign-post'],['entrance-sign-post','entrance-sign-shell'],['entrance-sign-shell','entrance-sign-face'],['entrance-sign-face','entrance-direction-arrow'],['scoreboard-shell','scoreboard-rain-hood']])assert(namedBounds(a).intersectsBox(namedBounds(b)),`${a} must attach to ${b}`);
+stadium.group.traverse(mesh=>{
+  if(mesh.name.startsWith('entrance-letter-'))assert(namedBounds(mesh.name).intersectsBox(namedBounds('entrance-sign-face')),'raised letters must be seated in the sign');
+});
+assert(SOCCER_ENVELOPE.clone().expandByScalar(1e-6).containsBox(new Box3().setFromObject(stadium.group)),'shared shadow envelope contains all stadium details');
 stadium.group.traverse(mesh=>{
   if(!mesh.isMesh)return;const g=mesh.geometry,p=g.attributes.position,n=g.attributes.normal,ix=g.index?.array??Array.from({length:p.count},(_,i)=>i),positions=[],normals=[];
   const vertices=Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)]),faces=[];
