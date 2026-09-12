@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grass Movement Sound Lab v2</title>
+<style>
+:root{color-scheme:dark;--bg:#10130f;--panel:#181d16;--panel2:#20271d;--line:#35402f;--text:#edf2e9;--muted:#a7b2a1;--accent:#8db56f}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(#0d100c,#151a13);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+main{width:min(900px,calc(100vw - 30px));background:linear-gradient(var(--panel),#141813);border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:0 25px 80px #0007}
+h1{margin:0 0 7px;font-size:25px}
+p{margin:0 0 20px;color:var(--muted);line-height:1.45}
+.buttons{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:21px}
+button{border:1px solid #415039;background:#253020;color:var(--text);border-radius:11px;padding:13px 8px;font-weight:700;cursor:pointer}
+button:hover{background:#2c3926} button.active{background:#405936;border-color:#7aa260}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 17px}
+.control{background:var(--panel2);border:1px solid #30392c;border-radius:12px;padding:13px}
+.row{display:flex;justify-content:space-between;gap:12px;margin-bottom:9px}
+.value{font-variant-numeric:tabular-nums;color:#cad5c4}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.note{margin-top:19px;padding:13px 15px;border-left:3px solid #718f59;background:#171c15;color:#b8c2b3;line-height:1.48}
+@media(max-width:720px){.buttons{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Grass movement sound lab — less impact, more surface</h1>
+<p>This version treats grass as a continuous friction texture. Foot contacts only reshape the brush noise; there are no synthetic blade clicks or sharp impact transients.</p>
+
+<div class="buttons">
+  <button id="single">Single step</button>
+  <button id="run">Run loop</button>
+  <button id="takeoff">Jump takeoff</button>
+  <button id="land">Jump land</button>
+  <button id="jump">Jump + land</button>
+</div>
+
+<div class="grid">
+  <div class="control">
+    <div class="row"><span>Grass presence</span><span class="value" id="grassV"></span></div>
+    <input id="grass" type="range" min="0" max="1" step=".01" value=".82">
+  </div>
+  <div class="control">
+    <div class="row"><span>Softness</span><span class="value" id="softV"></span></div>
+    <input id="soft" type="range" min="0" max="1" step=".01" value=".78">
+  </div>
+  <div class="control">
+    <div class="row"><span>Moisture</span><span class="value" id="moistV"></span></div>
+    <input id="moist" type="range" min="0" max="1" step=".01" value=".58">
+  </div>
+  <div class="control">
+    <div class="row"><span>Foot drag / brush</span><span class="value" id="dragV"></span></div>
+    <input id="drag" type="range" min="0" max="1" step=".01" value=".72">
+  </div>
+  <div class="control">
+    <div class="row"><span>Run cadence</span><span class="value" id="cadV"></span></div>
+    <input id="cad" type="range" min="2" max="5.5" step=".05" value="3.55">
+  </div>
+  <div class="control">
+    <div class="row"><span>Master volume</span><span class="value" id="volV"></span></div>
+    <input id="vol" type="range" min="0" max="1" step=".01" value=".78">
+  </div>
+</div>
+
+<div class="note">
+The run loop is the main test. It should read as feet moving through a short maintained pitch: a soft “shff / fssh” texture with pressure and release, not “tap / crunch / tick.”
+</div>
+</main>
+
+<script>
+(() => {
+  let ac, master, runBus, runSource, running=false, timer=0, foot=false;
+
+  const $=id=>document.getElementById(id);
+  const C={grass:$('grass'),soft:$('soft'),moist:$('moist'),drag:$('drag'),cad:$('cad'),vol:$('vol')};
+
+  function labels(){
+    $('grassV').textContent=(+C.grass.value).toFixed(2);
+    $('softV').textContent=(+C.soft.value).toFixed(2);
+    $('moistV').textContent=(+C.moist.value).toFixed(2);
+    $('dragV').textContent=(+C.drag.value).toFixed(2);
+    $('cadV').textContent=(+C.cad.value).toFixed(2)+' Hz';
+    $('volV').textContent=(+C.vol.value).toFixed(2);
+    if(master) master.gain.value=+C.vol.value;
+  }
+  Object.values(C).forEach(x=>x.addEventListener('input',labels)); labels();
+
+  function init(){
+    if(!ac){
+      ac=new (window.AudioContext||window.webkitAudioContext)();
+      master=ac.createGain(); master.gain.value=+C.vol.value;
+      const comp=ac.createDynamicsCompressor();
+      comp.threshold.value=-10; comp.knee.value=14; comp.ratio.value=2; comp.attack.value=.004; comp.release.value=.12;
+      master.connect(comp); comp.connect(ac.destination);
+    }
+    if(ac.state==='suspended') ac.resume();
+  }
+
+  function noiseBuffer(seconds){
+    const n=Math.ceil(ac.sampleRate*seconds), b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0);
+    let brown=0, last=0;
+    for(let i=0;i<n;i++){
+      const white=Math.random()*2-1;
+      brown=(brown*.985)+(white*.015);
+      const smooth=(white*.63 + last*.37);
+      last=smooth;
+      d[i]=smooth*.78+brown*.9;
+    }
+    return b;
+  }
+
+  function pan(node,x){
+    if(ac.createStereoPanner){
+      const p=ac.createStereoPanner(); p.pan.value=Math.max(-1,Math.min(1,x));
+      node.connect(p); p.connect(master);
+    }else node.connect(master);
+  }
+
+  // One broad, friction-like grass contact.
+  function contact(type='step', strength=1, stereo=0){
+    init();
+    const t=ac.currentTime+.008;
+    const grass=+C.grass.value, soft=+C.soft.value, moist=+C.moist.value, drag=+C.drag.value;
+
+    let dur=.16, peak=.12, attack=.012, release=.13;
+    if(type==='takeoff'){dur=.24;peak=.105;attack=.025;release=.19}
+    if(type==='land'){dur=.38;peak=.165;attack=.018;release=.32}
+
+    // Main grass rub: wide, soft, no impulse.
+    const src=ac.createBufferSource(); src.buffer=noiseBuffer(dur);
+    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=260+soft*160;
+    const body=ac.createBiquadFilter(); body.type='bandpass';
+    body.frequency.value=820 + (1-moist)*520 + drag*260;
+    body.Q.value=.42 + soft*.18;
+    const air=ac.createBiquadFilter(); air.type='highshelf';
+    air.frequency.value=2300; air.gain.value=-7 + grass*5 - moist*3;
+
+    const g=ac.createGain();
+    const amount=peak*strength*(.55+grass*.55);
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.linearRampToValueAtTime(amount,t+attack);
+    // broad pressure plateau; avoids a hit-like peak
+    g.gain.setValueAtTime(amount*(.86+Math.random()*.08),t+attack+dur*.24);
+    g.gain.exponentialRampToValueAtTime(.0001,t+release);
+
+    // very slow filter sweep simulates blades folding/releasing
+    body.frequency.setValueAtTime(body.frequency.value*.82,t);
+    body.frequency.exponentialRampToValueAtTime(body.frequency.value*1.08,t+dur*.45);
+    body.frequency.exponentialRampToValueAtTime(body.frequency.value*.72,t+dur);
+
+    src.connect(hp); hp.connect(body); body.connect(air); air.connect(g); pan(g,stereo);
+    src.start(t); src.stop(t+dur);
+
+    // Low-mid turf pressure: deliberately diffuse, almost no "thump".
+    const low=ac.createBufferSource(); low.buffer=noiseBuffer(Math.min(.20,dur));
+    const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=260+soft*120;
+    const lg=ac.createGain();
+    const lowAmt=(type==='land'?.036:.018)*strength*(.45+soft*.45);
+    lg.gain.setValueAtTime(.0001,t);
+    lg.gain.linearRampToValueAtTime(lowAmt,t+.018);
+    lg.gain.exponentialRampToValueAtTime(.0001,t+(type==='land'?.18:.11));
+    low.connect(lp); lp.connect(lg); pan(lg,stereo*.45);
+    low.start(t); low.stop(t+Math.min(.20,dur));
+
+    // For landings, a quiet trailing grass sweep gives the sense of vegetation settling.
+    if(type==='land'){
+      const trail=ac.createBufferSource(); trail.buffer=noiseBuffer(.32);
+      const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1200+(1-moist)*500; bp.Q.value=.35;
+      const tg=ac.createGain();
+      tg.gain.setValueAtTime(.0001,t+.055);
+      tg.gain.linearRampToValueAtTime(.045*grass*strength,t+.095);
+      tg.gain.exponentialRampToValueAtTime(.0001,t+.34);
+      trail.connect(bp); bp.connect(tg); pan(tg,-stereo*.2);
+      trail.start(t+.055); trail.stop(t+.375);
+    }
+  }
+
+  // Quiet continuous surface movement under the discrete pressure swells.
+  function startRunBed(){
+    init();
+    if(runSource) return;
+    runBus=ac.createGain(); runBus.gain.value=.0001;
+    const src=ac.createBufferSource(); src.buffer=noiseBuffer(3.2); src.loop=true;
+    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=520;
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1280; bp.Q.value=.33;
+    src.connect(hp); hp.connect(bp); bp.connect(runBus); runBus.connect(master);
+    const now=ac.currentTime;
+    runBus.gain.setValueAtTime(.0001,now);
+    runBus.gain.linearRampToValueAtTime(.018*(.45+(+C.grass.value)*.55),now+.12);
+    src.start();
+    runSource=src;
+  }
+
+  function stopRunBed(){
+    if(!runSource)return;
+    const s=runSource,b=runBus,now=ac.currentTime;
+    b.gain.cancelScheduledValues(now);
+    b.gain.setValueAtTime(Math.max(.0001,b.gain.value),now);
+    b.gain.exponentialRampToValueAtTime(.0001,now+.1);
+    setTimeout(()=>{try{s.stop()}catch{};try{b.disconnect()}catch{}},140);
+    runSource=null; runBus=null;
+  }
+
+  function runStep(){
+    if(!running)return;
+    foot=!foot;
+    // Lower individual contact strength than single-step preview:
+    // rhythm emerges from texture modulation rather than impacts.
+    contact('step',.72+Math.random()*.08,foot?-.08:.08);
+    const ms=1000/(+C.cad.value);
+    timer=setTimeout(runStep,ms*(.97+Math.random()*.06));
+  }
+
+  $('single').onclick=()=>contact('step',1,(Math.random()-.5)*.08);
+  $('takeoff').onclick=()=>contact('takeoff',1,0);
+  $('land').onclick=()=>contact('land',1,0);
+  $('jump').onclick=()=>{contact('takeoff',1,0);setTimeout(()=>contact('land',1.04,0),650)};
+  $('run').onclick=()=>{
+    init(); running=!running;
+    $('run').classList.toggle('active',running);
+    $('run').textContent=running?'Stop run loop':'Run loop';
+    if(running){startRunBed();runStep()}else{clearTimeout(timer);stopRunBed()}
+  };
+
+  addEventListener('keydown',e=>{
+    if(e.repeat)return;
+    if(e.key.toLowerCase()==='r')$('run').click();
+    if(e.key.toLowerCase()==='s')$('single').click();
+    if(e.code==='Space'){e.preventDefault();$('jump').click()}
+  });
+})();
+</script>
+</body>
+</html>

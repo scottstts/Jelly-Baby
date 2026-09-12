@@ -169,13 +169,18 @@ at the 240 Hz physics rate. Landing on a raised toy-track curb feeds its downwar
 impact into the same body-contact debounce, so it sounds like an ordinary floor
 landing rather than a separate facility effect.
 
-Soccer adds a field-only procedural artificial-turf run layer. It combines the
-original dry short-fiber brush with soft footfall pulses, follows measured player
-speed with a clearly audible gain, and uses the same distance attenuation and
-stereo panning as other positional audio. Raised-turf support routes jump
-landings to a related grass-brush transient rather than the hard-surface body
-contact sound. The layer stops immediately off the pitch and shares the normal
-mute, reset, travel, hidden-tab and disposal lifecycle.
+Soccer uses the `grass_movement_sound_lab_v2.html` graph for pitch movement. Its
+contacts use the lab's brown-plus-smoothed noise through the high-pass,
+band-pass and high-shelf chain, with diffuse low-mid turf pressure and the
+landing-only settling sweep. Running adds the lab's quiet continuous surface
+bed beneath its alternating `.72`–`.80` foot contacts at the lab's fixed `3.55
+Hz` cadence with its small timing jitter; game movement speed does not retime
+the sound. Takeoff and landing use the lab's exact `.24 s` and `.38 s` contact
+envelopes. While the player is on
+the pitch, the generic solid-surface contact sound is suppressed so it cannot
+layer a bongo-like tone over the grass sounds. The layer stops immediately off
+the pitch and shares the normal mute, reset, travel, hidden-tab and disposal
+lifecycle.
 
 A moving tricycle adds one deliberately quiet continuous procedural rolling
 texture. It begins only above a small motion threshold, follows absolute vehicle

@@ -1,7 +1,7 @@
 import type { PerspectiveCamera } from 'three/webgpu';
 import { FacilityAudio, type FacilitySoundEvent } from '../facilities/sound.ts';
 import { TricycleRollAudio } from '../worlds/toy-track/facilities/tricycle/sound.ts';
-import { SoccerAudio } from '../worlds/soccer/sound.ts';
+import { SoccerAudio, type GrassContactType } from '../worlds/soccer/sound.ts';
 import type { SoccerEvent } from '../worlds/soccer/physics.ts';
 type AudioWindow=Window&{webkitAudioContext?:typeof AudioContext};
 
@@ -78,13 +78,12 @@ export class JellySound {
     this.facilities?.play(event,distance,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance));
   };
   stopFacilities() {this.facilities?.stop();this.tricycleRoll?.stop();this.soccer?.stop();}
-  soccerMotion(speed:number,p:{x:number;y:number;z:number}) {
-    if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
-    this.soccer?.motion(speed,distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
+  soccerMotion(speed:number) {
+    if(this.muted||document.hidden)return;this.soccer?.motion(speed);
   }
-  soccerLanding(speed:number,p:{x:number;y:number;z:number}) {
-    if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);
-    this.soccer?.landing(Math.min(1,speed/.62),distance,Math.max(-.7,Math.min(.7,(dx*l.rightX+dz*l.rightZ)/Math.max(.12,distance))));
+  soccerGrassContact(type:Exclude<GrassContactType,'step'>) {
+    if(this.muted||document.hidden)return;
+    this.soccer?.grassJump(type);
   }
   soccerEvent(kind:SoccerEvent,strength:number,p:{x:number;y:number;z:number}) {
     if(this.muted||document.hidden)return;const l=this.listener,dx=p.x-l.x,dz=p.z-l.z,distance=Math.hypot(dx,p.y-l.y,dz);

@@ -54,7 +54,10 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   const worlds=new WorldTravel(scene,body,facilityShadows,facilities,renderer,camera,stage,fail);
   const wearableTable=new WearableFacility(worlds.home,body,baby.group,rig,facilityShadows);
   const bed=new BedFacility(worlds.home,body,facilityShadows);
-  rig.onJump=()=>wearableTable.jumpFromNormalLocomotion();
+  rig.onJump=()=>{
+    wearableTable.jumpFromNormalLocomotion();
+    if(worlds.inSoccer&&(worlds.soccer?.physics.onField??false))sound.soccerGrassContact('takeoff');
+  };
   facilities.add(wearableTable);
   worlds.toyFacilities.add(new CarriedWearableFacility(wearableTable));
   worlds.soccerFacilities.add(new CarriedWearableFacility(wearableTable));
@@ -65,8 +68,9 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
     baby.setFlavor(flavor);optics.setAbsorption(JELLY_FLAVORS[flavor].absorption);
   });
   rig.onContact=(speed,foot)=>{
-    const grassLanding=!foot&&worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
-    if(grassLanding)sound.soccerLanding(speed,body.center);else sound.contact(speed,foot);
+    const soccerField=worlds.inSoccer&&(worlds.soccer?.physics.onField??false);
+    if(soccerField){if(!foot)sound.soccerGrassContact('land');return;}
+    sound.contact(speed,foot);
   };
   const physicsClock=new FixedStepper(PHYS.step);
   let lastTime=0,disposed=false;
@@ -164,7 +168,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
       const tricycle=worlds.inToys?worlds.tricycle?.physics:undefined;
       if(tricycle)sound.tricycleMotion(tricycle.riding?tricycle.rollingSpeed:0,tricycle.position.x,tricycle.position.y+.025,tricycle.position.z);
       const soccer=worlds.inSoccer?worlds.soccer?.physics:undefined;
-      if(soccer)sound.soccerMotion(soccer.onField&&rig.grounded&&rig.move.lengthSq()>.01?Math.hypot(rig.velocity.x,rig.velocity.z):0,body.center);
+      if(soccer)sound.soccerMotion(soccer.onField&&rig.grounded&&rig.move.lengthSq()>.01?Math.hypot(rig.velocity.x,rig.velocity.z):0);
       transport.follow();
       optics.update(renderer,body);
       table.mesh.position.x=body.center.x;table.mesh.position.z=body.center.z;

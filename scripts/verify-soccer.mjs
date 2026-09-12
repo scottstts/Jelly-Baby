@@ -58,5 +58,5 @@ assert(Math.abs(soccer.ball.x)<1e-6&&Math.abs(soccer.ball.z)<1e-6,'restart retur
 soccer.ball.set(.95,FIELD.y+BALL.radius,0);soccer.ballVelocity.set(1,0,0);step(.1);assert(soccer.ballVelocity.x<0,'side board rebounds');
 soccer.goalie.place(0,-1.43,0);soccer.ball.set(0,.20,-.98);soccer.ballVelocity.set(0,.15,-1.6);step(.20);assert(soccer.goalie.jumpHeight>0,'keeper launches a physical jump for a high shot');
 soccer.reset();assert.equal(soccer.score,0);assert.equal(soccer.ball.lengthSq()>0,true);
-for(const kind of ['run','land','save','post','bump','goal']) {const pcm=soccerSample(kind,24000);assert(pcm.every(Number.isFinite));assert(Math.max(...pcm)<.7);assert(pcm.some(v=>Math.abs(v)>.001));}
+for(const kind of ['save','post','bump','goal']) {const pcm=soccerSample(kind,24000);assert(pcm.every(Number.isFinite));assert(Math.max(...pcm)<.7);assert(pcm.some(v=>Math.abs(v)>.001));}
 console.log('Soccer: direct 3x field running, ordinary on-foot movement, deformable turf landings, scoring/restart, boards, keeper jump and artificial-turf audio passed.',{normal,fieldRun,lowLandingShake,highLandingShake});

@@ -42,10 +42,14 @@ Player/keeper collision uses a moving compound body envelope and reciprocal
 finite-mass recoil. It preserves separate core, head, arms and lower body rather
 than filling the silhouette with one large box.
 
-Audio uses cached procedural artificial-turf running and impact samples. The
-field-only run loop combines short dry fiber noise with soft repeated footfall
-pulses, then follows measured player speed, attenuation and pan at an audible
-gain. Posts, body contacts, saves and goals have separate envelopes; field
-support routes jump landings into a related dry-grass transient rather than the
-solid-surface body impact. Contacts are debounced. Mute, hidden tabs, reset,
-portal menus, travel and disposal stop ongoing sound.
+Audio uses the `grass_movement_sound_lab_v2.html` contact graph for pitch
+movement: brown-plus-smoothed noise, the lab's high-pass/band-pass/high-shelf
+filters, diffuse low-mid turf pressure, and its landing-only settling sweep.
+The run layer is the lab's quiet continuous bed plus alternating `.72`–`.80`
+foot contacts at its fixed `3.55 Hz` cadence with its small timing jitter;
+soccer movement speed does not retime the sound. Takeoff and landing use the
+lab's `.24 s` and `.38 s` envelopes.
+The generic solid-surface contact path is suppressed for player contacts on the
+pitch, so it cannot add a bongo-like layer to grass. Posts, saves and goals keep
+their separate event envelopes. Mute, hidden tabs, reset, portal menus, travel
+and disposal stop ongoing sound.
