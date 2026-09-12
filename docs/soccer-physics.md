@@ -62,7 +62,9 @@ filters, diffuse low-mid turf pressure, and its landing-only settling sweep.
 The run layer is the lab's quiet continuous bed plus alternating `.72`–`.80`
 foot contacts at its fixed `3.55 Hz` cadence with its small timing jitter;
 soccer movement speed does not retime the sound. Takeoff and landing use the
-lab's `.24 s` and `.38 s` envelopes.
+lab's `.24 s` and `.38 s` envelopes. The complete grass layer is scaled to
+`60%` of the lab level, reducing walking and jumping volume by 40% without
+changing its pace or filter character.
 The generic solid-surface contact path is suppressed for player contacts on the
 pitch, so it cannot add a bongo-like layer to grass. Posts, saves and goals keep
 their separate event envelopes. Mute, hidden tabs, reset, portal menus, travel

@@ -7,6 +7,7 @@ const GRASS_SOFTNESS=.78;
 const GRASS_MOISTURE=.58;
 const GRASS_DRAG=.72;
 const GRASS_RUN_CADENCE=3.55;
+const GRASS_VOLUME=.60;
 
 /** The soccer-ball event texture; grass movement uses the sound-lab graph below. */
 export function soccerSample(kind:SoccerEvent,sampleRate:number) {
@@ -71,7 +72,7 @@ export class SoccerAudio {
     const highpass=ctx.createBiquadFilter();highpass.type='highpass';highpass.frequency.value=260+soft*160;
     const body=ctx.createBiquadFilter();body.type='bandpass';body.frequency.value=820+(1-moist)*520+drag*260;body.Q.value=.42+soft*.18;
     const air=ctx.createBiquadFilter();air.type='highshelf';air.frequency.value=2300;air.gain.value=-7+grass*5-moist*3;
-    const gain=ctx.createGain(),amount=peak*strength*(.55+grass*.55);
+    const gain=ctx.createGain(),amount=peak*strength*(.55+grass*.55)*GRASS_VOLUME;
     gain.gain.setValueAtTime(.0001,t);gain.gain.linearRampToValueAtTime(amount,t+attack);
     gain.gain.setValueAtTime(amount*(.86+Math.random()*.08),t+attack+dur*.24);gain.gain.exponentialRampToValueAtTime(.0001,t+release);
     body.frequency.setValueAtTime(body.frequency.value*.82,t);body.frequency.exponentialRampToValueAtTime(body.frequency.value*1.08,t+dur*.45);body.frequency.exponentialRampToValueAtTime(body.frequency.value*.72,t+dur);
@@ -79,14 +80,14 @@ export class SoccerAudio {
 
     const low=ctx.createBufferSource();low.buffer=this.noiseBuffer(Math.min(.20,dur));
     const lowpass=ctx.createBiquadFilter();lowpass.type='lowpass';lowpass.frequency.value=260+soft*120;
-    const lowGain=ctx.createGain(),lowAmount=(type==='land'?.036:.018)*strength*(.45+soft*.45);
+    const lowGain=ctx.createGain(),lowAmount=(type==='land'?.036:.018)*strength*(.45+soft*.45)*GRASS_VOLUME;
     lowGain.gain.setValueAtTime(.0001,t);lowGain.gain.linearRampToValueAtTime(lowAmount,t+.018);lowGain.gain.exponentialRampToValueAtTime(.0001,t+(type==='land'?.18:.11));
     const lowPanner=this.connectGrass(lowGain,stereo*.45);low.connect(lowpass).connect(lowGain);this.scheduleGrassVoice(low,[lowpass,lowGain,lowPanner],t,t+Math.min(.20,dur));
 
     if(type==='land') {
       const trail=ctx.createBufferSource();trail.buffer=this.noiseBuffer(.32);
       const trailBand=ctx.createBiquadFilter();trailBand.type='bandpass';trailBand.frequency.value=1200+(1-moist)*500;trailBand.Q.value=.35;
-      const trailGain=ctx.createGain();trailGain.gain.setValueAtTime(.0001,t+.055);trailGain.gain.linearRampToValueAtTime(.045*grass*strength,t+.095);trailGain.gain.exponentialRampToValueAtTime(.0001,t+.34);
+      const trailGain=ctx.createGain();trailGain.gain.setValueAtTime(.0001,t+.055);trailGain.gain.linearRampToValueAtTime(.045*grass*strength*GRASS_VOLUME,t+.095);trailGain.gain.exponentialRampToValueAtTime(.0001,t+.34);
       const trailPanner=this.connectGrass(trailGain,-stereo*.2);trail.connect(trailBand).connect(trailGain);this.scheduleGrassVoice(trail,[trailBand,trailGain,trailPanner],t+.055,t+.375);
     }
   }
@@ -95,7 +96,7 @@ export class SoccerAudio {
     const ctx=this.context,bus=ctx.createGain(),source=ctx.createBufferSource(),highpass=ctx.createBiquadFilter(),bandpass=ctx.createBiquadFilter();
     bus.gain.value=.0001;source.buffer=this.noiseBuffer(3.2);source.loop=true;highpass.type='highpass';highpass.frequency.value=520;bandpass.type='bandpass';bandpass.frequency.value=1280;bandpass.Q.value=.33;
     source.connect(highpass).connect(bandpass).connect(bus).connect(this.output);
-    const now=ctx.currentTime;bus.gain.setValueAtTime(.0001,now);bus.gain.linearRampToValueAtTime(.018*(.45+GRASS_PRESENCE*.55),now+.12);
+    const now=ctx.currentTime;bus.gain.setValueAtTime(.0001,now);bus.gain.linearRampToValueAtTime(.018*(.45+GRASS_PRESENCE*.55)*GRASS_VOLUME,now+.12);
     source.onended=()=>{source.disconnect();bus.disconnect();highpass.disconnect();bandpass.disconnect();};source.start();
     this.runSource=source;this.runBus=bus;this.runNodes=[bus,highpass,bandpass];
     this.grassStep();

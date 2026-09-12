@@ -176,7 +176,9 @@ landing-only settling sweep. Running adds the lab's quiet continuous surface
 bed beneath its alternating `.72`–`.80` foot contacts at the lab's fixed `3.55
 Hz` cadence with its small timing jitter; game movement speed does not retime
 the sound. Takeoff and landing use the lab's exact `.24 s` and `.38 s` contact
-envelopes. While the player is on
+envelopes. The game scales the complete grass layer to `60%` of the lab level,
+reducing both walking and jumping volume by 40% without changing their pace or
+filter character. While the player is on
 the pitch, the generic solid-surface contact sound is suppressed so it cannot
 layer a bongo-like tone over the grass sounds. The layer stops immediately off
 the pitch and shares the normal mute, reset, travel, hidden-tab and disposal
