@@ -65,7 +65,7 @@ export class SoccerFacility implements Facility {
   warmupCollision(){this.collision.warmupBoxes(this.stadium.boxes);this.goalieContact.warmup();this.equipmentCollision.warmupBoxes(this.displayedEquipment);}
   update() {
     const p=this.physics;this.playerSkates.group.visible=p.riding;this.displaySkates.group.visible=!p.riding;
-    this.playerSkates.update(p.player.position,p.player.yaw,p.player.travel);this.goalieSkates.update(p.goalie.position,p.goalie.yaw,p.goalie.travel);
+    this.playerSkates.update(p.player.position,p.player.yaw,p.player.travel,p.player.pivotPhase,p.player.pivotWeight);this.goalieSkates.update(p.goalie.position,p.goalie.yaw,p.goalie.travel);
     this.ball.position.copy(p.ball);this.ball.quaternion.copy(p.ballRotation);
     this.score.hidden=!p.riding;
     if(this.scoreValue!==p.score){this.scoreValue=p.score;this.score.textContent=`${p.score} ${p.score===1?'goal':'goals'}`;this.stadium.setScore(p.score);}

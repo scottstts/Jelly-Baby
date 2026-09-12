@@ -25,7 +25,9 @@ same loading, arrival, and camera-side placement path after the interaction.
 Interaction opens a modal destination selector: **Home**, **Play Tricycle**,
 and **Play Soccer**. Mouse/touch or arrows and Enter confirm a destination;
 Escape or Stay here cancels. Navigation keys belong exclusively to the modal,
-and simulation pauses until it closes. Choosing the current world just closes it.
+and simulation pauses until it closes. Each time it opens, the current world is
+the selected and focused destination, so confirming immediately leaves the
+player in place. Choosing the current world just closes it.
 
 [`WorldTravel`](../src/worlds/travel.ts) owns three scene roots and independent
 facility managers. The home placement lives in

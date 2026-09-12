@@ -71,7 +71,7 @@ export async function startGame(stage:(s:string)=>void,fail:(e:unknown)=>void) {
   input.bodyControlled=()=>worlds.loading||worlds.menu.opened||!!worlds.facilities.active;
   input.menuOpen=()=>worlds.menu.opened;
   input.soccerActive=()=>worlds.inSoccer&&(worlds.soccer?.active??false);
-  input.soccerInput=(x,z)=>{if(worlds.inSoccer&&worlds.soccer?.active)worlds.soccer.physics.player.move.set(x,0,z);};
+  input.soccerInput=(throttle,steer)=>{if(worlds.inSoccer&&worlds.soccer?.active)worlds.soccer.physics.player.setInput(throttle,steer);};
   input.shoot=()=>{if(worlds.inSoccer)worlds.soccer?.physics.shoot();};
   input.facilityCameraDistance=()=>worlds.facilities.active?.cameraDistance;
   input.vehicleInput=(throttle,turn)=>{const p=worlds.tricycle?.physics;if(p&&worlds.inToys){p.throttle=p.riding?throttle:0;p.turn=p.riding?turn:0;}};

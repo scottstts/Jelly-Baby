@@ -3,9 +3,16 @@
 Soccer uses SI units, the game's 240 Hz fixed step and `PHYS.gravity`. Skating
 is powered support: forces act on live FEM node velocities, with stronger
 lower-body support and a compliant crown. Only boarding, leaving and reset
-place the rest pose directly. Acceleration is bounded, nominal speed is
-82 cm/s, and releasing movement preserves a short coast. Support height
-follows the pitch, access ramp and wooden concourse.
+place the rest pose directly. The controllable skater's forward speed is
+0.4592 m/s (45.92 cm/s). Its rolling maximum steering rate is 0.72 rad/s,
+matching the stationary pivot sensitivity; its yaw direction reverses while
+backing up. Forward/reverse acceleration acts along the heading, lateral speed
+is damped, and steering never creates sideways translation. A stationary
+steering input instead drives a zero-horizontal-displacement duck-like pivot
+hop at roughly 3.5 hops per second; the attached blades share that phase so one
+blade remains grounded while the other lifts. Releasing movement preserves a short
+coast. Support height follows the pitch, access ramp and wooden concourse. The
+goalkeeper keeps its own independent tracking tuning.
 
 The ball is a 42 mm sphere with 8 g mass. Gravity, restitution, rolling drag,
 contact-transferred spin, modest Magnus curvature and quaternion rotation run

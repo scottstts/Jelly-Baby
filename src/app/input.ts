@@ -28,7 +28,7 @@ export class Input {
   ridingVehicle:()=>boolean=()=>false;
   vehicleHeading:()=>number|undefined=()=>undefined;
   soccerActive:()=>boolean=()=>false;
-  soccerInput:((x:number,z:number)=>void)|undefined;
+  soccerInput:((throttle:number,steer:number)=>void)|undefined;
   shoot:()=>void=()=>{};
   menuOpen:()=>boolean=()=>false;
   private readonly chase:TricycleCamera;
@@ -256,9 +256,9 @@ export class Input {
     const inputLength=Math.hypot(x,z);
     if(inputLength>1){x/=inputLength;z/=inputLength;}
     this.vehicleInput?.(z,-x);
-    // Soccer steering is camera-relative like walking, with a yaw-follow camera.
-    this.camera.getWorldDirection(this.temp);this.temp.y=0;this.temp.normalize();
-    this.soccerInput?.(-this.temp.z*x+this.temp.x*z,this.temp.x*x+this.temp.z*z);
+    // Soccer keeps the stick/keys as explicit throttle and steering axes. The
+    // skater owns the heading and turns only when rolling or performing a pivot.
+    this.soccerInput?.(z,-x);
     if(this.bodyControlled()){this.rig.move.set(0,0,0);return;}
     if(x||z) {
       this.camera.getWorldDirection(this.temp);this.temp.y=0;this.temp.normalize();

@@ -3,6 +3,15 @@ import { SoftBody } from '../../physics/soft-body.js';
 import { PHYS, clamp } from '../../physics/constants.js';
 import { BALL, ENTRANCE, FIELD, FIELD_RAMP, GOAL, SKATE } from './layout.ts';
 
+export const PLAYER_SKATE_MAX_SPEED=.4592;
+export const PLAYER_SKATE_TURN_RATE=.72;
+const LATERAL_GRIP=18;
+const PIVOT_HOP_RATE=22;
+const PIVOT_HOP_HEIGHT=.004;
+const PIVOT_WADDLE=.0045;
+const PIVOT_ANCHOR_STIFFNESS=220;
+const PIVOT_ANCHOR_DAMPING=30;
+
 /** Clone mutable skin/cage buffers; the goalie must never write the player's skin. */
 export function makeGoalieBody(player:SoftBody) {
   const cage=player.cage;
@@ -16,6 +25,16 @@ export class SkateRig {
   readonly velocity=new Vector3();
   readonly position=new Vector3();
   readonly restCenter=new Vector3();
+  private readonly maxSpeed:number;
+  private readonly turnRate:number;
+  private readonly controlled:boolean;
+  private throttle=0;
+  private steer=0;
+  private pivotHopPhase=0;
+  private pivotHopWeight=0;
+  private pivotActive=false;
+  private pivotOriginX=0;
+  private pivotOriginZ=0;
   yaw=Math.PI;
   travel=0;
   arch=0;
@@ -23,36 +42,65 @@ export class SkateRig {
   jumpSpeed=0;
   private meanUpper=0;
   private meanUpperSquared=0;
+  private meanSpringUpper=0;
   get floorHeight(){const p=this.body.center;if(Math.abs(p.x-FIELD_RAMP.x)<FIELD_RAMP.width/2&&p.z>=FIELD_RAMP.start&&p.z<=FIELD_RAMP.end)return FIELD.y-(p.z-FIELD_RAMP.start)/.16*.011;return Math.abs(p.x)<=1&&Math.abs(p.z)<=FIELD.length/2||Math.abs(p.x)<GOAL.width/2+.01&&Math.abs(p.z)<FIELD.length/2+GOAL.depth?FIELD.y:PHYS.floor;}
-  constructor(body:SoftBody) {
-    this.body=body;for(let i=0;i<body.mass.length;i++){const weight=body.mass[i]/body.totalMass,upper=clamp(body.rest[i*3+1]/.07,0,1);this.restCenter.addScaledVector(new Vector3().fromArray(body.rest,i*3),weight);this.meanUpper+=upper*weight;this.meanUpperSquared+=upper*upper*weight;}
+  get pivotPhase(){return this.pivotHopPhase;}
+  get pivotWeight(){return this.pivotHopWeight;}
+  constructor(body:SoftBody,maxSpeed=PLAYER_SKATE_MAX_SPEED,turnRate=PLAYER_SKATE_TURN_RATE,controlled=false) {
+    this.maxSpeed=maxSpeed;this.turnRate=turnRate;this.controlled=controlled;
+    this.body=body;let springWeight=0;
+    for(let i=0;i<body.mass.length;i++){const weight=body.mass[i]/body.totalMass,upper=clamp(body.rest[i*3+1]/.07,0,1),spring=body.rest[i*3+1]<.02?1700:850;this.restCenter.addScaledVector(new Vector3().fromArray(body.rest,i*3),weight);this.meanUpper+=upper*weight;this.meanUpperSquared+=upper*upper*weight;this.meanSpringUpper+=upper*weight*spring;springWeight+=weight*spring;}
+    this.meanSpringUpper/=springWeight;
   }
+  setInput(throttle:number,steer:number) {this.throttle=clamp(throttle,-1,1);this.steer=clamp(steer,-1,1);}
   place(x:number,z:number,yaw:number,floor:number=FIELD.y) {
-    const b=this.body,c=Math.cos(yaw),s=Math.sin(yaw);this.yaw=yaw;this.velocity.set(0,0,0);this.move.set(0,0,0);this.jumpHeight=this.jumpSpeed=this.arch=0;
+    const b=this.body,c=Math.cos(yaw),s=Math.sin(yaw);this.yaw=yaw;this.velocity.set(0,0,0);this.move.set(0,0,0);this.setInput(0,0);this.pivotHopPhase=0;this.pivotHopWeight=0;this.pivotActive=false;this.jumpHeight=this.jumpSpeed=this.arch=0;
     for(let j=0;j<b.x.length;j+=3) {const rx=b.rest[j]-this.restCenter.x,rz=b.rest[j+2]-this.restCenter.z;b.x[j]=x+rx*c+rz*s;b.x[j+1]=b.rest[j+1]+floor+SKATE.lift;b.x[j+2]=z+rz*c-rx*s;}
     b.previous.set(b.x);b.velocity.fill(0);b.updateCenter();b.surfaceDirty=true;b.wake();this.position.set(x,floor,z);
   }
-  step(h:number,maxSpeed=.82,turnToMovement=true) {
+  step(h:number,maxSpeed=this.maxSpeed,turnToMovement=true,turnRate=this.turnRate) {
     const b=this.body,v=b.velocity;this.velocity.set(0,0,0);
     for(let i=0;i<b.mass.length;i++){const j=i*3,w=b.mass[i]/b.totalMass;this.velocity.x+=v[j]*w;this.velocity.y+=v[j+1]*w;this.velocity.z+=v[j+2]*w;}
-    const speed=this.move.length();
-    if(speed>.02&&turnToMovement) {const desired=Math.atan2(this.move.x,this.move.z);this.yaw+=Math.atan2(Math.sin(desired-this.yaw),Math.cos(desired-this.yaw))*(1-Math.exp(-9*h));}
-    const damping=speed>.02?6.5:2.8;
-    const ax=clamp((this.move.x*maxSpeed-this.velocity.x)*damping,-3,3),az=clamp((this.move.z*maxSpeed-this.velocity.z)*damping,-3,3);
+    let ax:number,az:number,longitudinalVelocity=0;
+    if(this.controlled) {
+      const headingX=Math.sin(this.yaw),headingZ=Math.cos(this.yaw),rightX=Math.cos(this.yaw),rightZ=-Math.sin(this.yaw);
+      longitudinalVelocity=this.velocity.x*headingX+this.velocity.z*headingZ;
+      const lateralVelocity=this.velocity.x*rightX+this.velocity.z*rightZ,planarSpeed=Math.hypot(this.velocity.x,this.velocity.z);
+      const rolling=Math.abs(longitudinalVelocity)>.012,pivoting=planarSpeed<=.012&&Math.abs(this.throttle)<=.02&&Math.abs(this.steer)>.02;
+      const targetSpeed=this.throttle*maxSpeed,damping=Math.abs(this.throttle)>.02?6.5:2.8;
+      const forwardAcceleration=clamp((targetSpeed-longitudinalVelocity)*damping,-3,3),lateralAcceleration=clamp(-lateralVelocity*LATERAL_GRIP,-3,3);
+      ax=forwardAcceleration*headingX+lateralAcceleration*rightX;az=forwardAcceleration*headingZ+lateralAcceleration*rightZ;
+      if(pivoting) {
+        if(!this.pivotActive){this.pivotActive=true;this.pivotOriginX=b.center.x;this.pivotOriginZ=b.center.z;}
+        ax+=clamp((this.pivotOriginX-b.center.x)*PIVOT_ANCHOR_STIFFNESS-this.velocity.x*PIVOT_ANCHOR_DAMPING,-3,3);az+=clamp((this.pivotOriginZ-b.center.z)*PIVOT_ANCHOR_STIFFNESS-this.velocity.z*PIVOT_ANCHOR_DAMPING,-3,3);
+        this.yaw+=this.steer*turnRate*h;this.pivotHopPhase+=PIVOT_HOP_RATE*h;this.pivotHopWeight+=(1-this.pivotHopWeight)*(1-Math.exp(-16*h));
+      } else {
+        this.pivotActive=false;this.pivotHopWeight*=Math.exp(-12*h);
+        if(rolling&&Math.abs(this.steer)>.02) {
+          this.yaw+=this.steer*turnRate*Math.sign(longitudinalVelocity)*h;
+        }
+      }
+    } else {
+      const speed=this.move.length();
+      if(speed>.02&&turnToMovement) {const desired=Math.atan2(this.move.x,this.move.z);this.yaw+=Math.atan2(Math.sin(desired-this.yaw),Math.cos(desired-this.yaw))*(1-Math.exp(-turnRate*h));}
+      const damping=speed>.02?6.5:2.8;
+      ax=clamp((this.move.x*maxSpeed-this.velocity.x)*damping,-3,3);az=clamp((this.move.z*maxSpeed-this.velocity.z)*damping,-3,3);
+    }
     if(this.jumpHeight>0||this.jumpSpeed>0){this.jumpSpeed-=PHYS.gravity*h;this.jumpHeight=Math.max(0,this.jumpHeight+this.jumpSpeed*h);if(!this.jumpHeight)this.jumpSpeed=0;}
     const c=Math.cos(this.yaw),s=Math.sin(this.yaw),floor=this.floorHeight,leanX=clamp(ax*.0025,-.008,.008),leanZ=clamp(az*.0025,-.008,.008);
+    const pivotLift=this.pivotHopWeight*Math.max(0,Math.sin(this.pivotHopPhase))*PIVOT_HOP_HEIGHT,pivotSway=this.pivotHopWeight*this.steer*Math.sin(this.pivotHopPhase)*PIVOT_WADDLE;
     for(let i=0;i<b.mass.length;i++) {
       const j=i*3,rx=b.rest[j]-this.restCenter.x,ry=b.rest[j+1],rz=b.rest[j+2]-this.restCenter.z,upper=clamp(ry/.07,0,1);
       // Internal posture changes have zero mass-weighted translation. Otherwise
       // an arch can accidentally skate the entire jelly backward during windup.
-      const bend=this.arch*(upper*upper-this.meanUpperSquared),tx=b.center.x+rx*c+rz*s+s*bend+leanX*(upper-this.meanUpper),tz=b.center.z+rz*c-rx*s+c*bend+leanZ*(upper-this.meanUpper);
-      const ty=ry+floor+SKATE.lift+this.jumpHeight-Math.abs(this.arch)*.22*upper;
+      const bend=this.arch*(upper*upper-this.meanUpperSquared),waddle=pivotSway*(upper-this.meanSpringUpper),tx=b.center.x+rx*c+rz*s+s*bend+leanX*(upper-this.meanUpper)+waddle*c,tz=b.center.z+rz*c-rx*s+c*bend+leanZ*(upper-this.meanUpper)-waddle*s;
+      const ty=ry+floor+SKATE.lift+this.jumpHeight+pivotLift-Math.abs(this.arch)*.22*upper;
       const k=ry<.02?1700:850,drag=ry<.02?45:24;
       v[j]+=(k*(tx-b.x[j])-24*(v[j]-this.velocity.x)+ax)*h;
       v[j+1]+=(k*(ty-b.x[j+1])-drag*(v[j+1]-this.jumpSpeed)+PHYS.gravity)*h;
       v[j+2]+=(k*(tz-b.x[j+2])-24*(v[j+2]-this.velocity.z)+az)*h;
     }
-    b.canSleep=false;b.wake();this.travel+=Math.hypot(this.velocity.x,this.velocity.z)*h;
+    b.canSleep=false;b.wake();this.travel+=(this.controlled?longitudinalVelocity:Math.hypot(this.velocity.x,this.velocity.z))*h;
     this.position.set(b.center.x,this.floorHeight+this.jumpHeight,b.center.z);
   }
 }
@@ -85,7 +133,7 @@ export class SoccerPhysics {
   private readonly previousBall=new Vector3();
   private readonly patchWeights:Float64Array;
   onEvent:(kind:SoccerEvent,strength:number,position:Vector3)=>void=()=>{};
-  constructor(body:SoftBody,goalieBody=makeGoalieBody(body)) {this.body=body;this.patchWeights=new Float64Array(body.mass.length);this.player=new SkateRig(body);this.goalie=new SkateRig(goalieBody);this.goalie.place(0,-1.43,0);}
+  constructor(body:SoftBody,goalieBody=makeGoalieBody(body)) {this.body=body;this.patchWeights=new Float64Array(body.mass.length);this.player=new SkateRig(body,PLAYER_SKATE_MAX_SPEED,PLAYER_SKATE_TURN_RATE,true);this.goalie=new SkateRig(goalieBody,.66,6);this.goalie.place(0,-1.43,0);}
   get crying(){return this.riding&&this.shotAge<.48&&this.celebration<=0;}
   get laughing(){return this.riding&&this.celebration>0;}
   get canLeave(){return this.riding&&Math.hypot(this.body.center.x-ENTRANCE.x,this.body.center.z-(ENTRANCE.z-.08))<.22;}
@@ -233,5 +281,5 @@ export class SoccerPhysics {
     if(dx||dz){for(let j=0;j<b.x.length;j+=3){b.x[j]+=dx;b.x[j+2]+=dz;if(dx&&b.velocity[j]*dx<0)b.velocity[j]*=-.15;if(dz&&b.velocity[j+2]*dz<0)b.velocity[j+2]*=-.15;}b.updateCenter();b.surfaceDirty=true;}
   }
   centerBall(){this.ball.set(0,FIELD.y+BALL.radius,0);this.ballVelocity.set(0,0,0);this.ballSpin.set(0,0,0);this.resetBallIn=0;}
-  reset(){this.riding=false;this.score=0;this.shotAge=Infinity;this.lastShot=-2;this.elapsed=this.celebration=this.reaction=this.jumpCooldown=this.goalieHold=this.eventHold=0;this.targetX=0;this.targetZ=-1.43;this.player.move.set(0,0,0);this.centerBall();this.ballRotation.identity();this.goalie.place(0,-1.43,0);}
+  reset(){this.riding=false;this.score=0;this.shotAge=Infinity;this.lastShot=-2;this.elapsed=this.celebration=this.reaction=this.jumpCooldown=this.goalieHold=this.eventHold=0;this.targetX=0;this.targetZ=-1.43;this.player.move.set(0,0,0);this.player.setInput(0,0);this.centerBall();this.ballRotation.identity();this.goalie.place(0,-1.43,0);}
 }

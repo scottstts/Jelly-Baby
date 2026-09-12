@@ -18,7 +18,11 @@ three urethane wheels each; there are no boots or invented feet. The player
 can return through the ramp and concourse, then use E near the stadium gate
 to remove the skates and reappear outside.
 
-WASD/arrows and the joystick remain camera-relative. The chase camera allows
+WASD/arrows and the joystick use forward/reverse throttle plus left/right
+steering. Steering does not provide sideways translation: while rolling, its
+turn sensitivity matches the stationary pivot and reverses for backward travel;
+a still baby pivots in place with a small duck-like side-hop animation. The
+chase camera allows
 a 1.46-radian polar angle while skating, including on mobile. It accepts manual
 orbit while held and returns along the shortest arc after release. Leaving
 skates restores the viewport-dependent normal camera limit, including its

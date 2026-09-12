@@ -34,7 +34,7 @@ place(GOAL.width/2,1.43,FIELD.y);assert(!walkTo(GOAL.width/2,1.60,2).arrived,'go
 // A goal mouth must not be replaced by one large collision box.
 place(0,1.38,FIELD.y);assert(walkTo(0,1.60,3).arrived,'the goal mouth remains open');
 const soccer=new SoccerPhysics(body);soccer.board();
-for(let i=0;i<800;i++){soccer.player.move.set(0,0,1);soccer.step(h);body.step(h);collision.resolveBoxes(grid.near(body));soccer.afterStep();if(soccer.canLeave)break;}
+for(let i=0;i<800;i++){soccer.player.setInput(-1,0);soccer.step(h);body.step(h);collision.resolveBoxes(grid.near(body));soccer.afterStep();if(soccer.canLeave)break;}
 assert(soccer.canLeave,'skater can traverse the same field-to-gate route');
 // Spatial pruning must retain every overlapping volume, including at corners.
 const b=new Float64Array(6),piece=new Float64Array(6);let tested=0,maxCandidates=0;

@@ -34,7 +34,8 @@ export class DestinationMenu {
   }
   show(current:WorldId) {
     this.opened=true;this.previousFocus=document.activeElement as HTMLElement|null;
-    this.selected=(DESTINATIONS.findIndex(d=>d.id===current)+1)%DESTINATIONS.length;
+    const currentIndex=DESTINATIONS.findIndex(d=>d.id===current);
+    this.selected=currentIndex>=0?currentIndex:0;
     this.buttons.forEach((button,i)=>{button.setAttribute('aria-current',String(DESTINATIONS[i].id===current));});
     this.element.showModal();this.buttons[this.selected].focus();
   }

@@ -10,8 +10,10 @@ release.
 Portals open a destination menu. Arrows and Enter belong exclusively to the
 modal until confirmation or cancellation. In Soccer, the touch jump button
 becomes Shoot and Space runs the shot action. Leaving skates restores the hop
-caption. Soccer uses camera-relative skating and a lower chase angle with the
-same drag/release return behavior as the tricycle.
+caption. Soccer uses forward/reverse throttle and left/right steering, with a
+motion-gated rolling turn and an in-place duck-like pivot hop when stationary.
+It keeps the lower chase angle and the same drag/release return behavior as the
+tricycle.
 
 While riding the tricycle, WASD and the touch joystick supply vehicle-relative
 throttle and steering. The movement hint changes to “pedal · steer,” and the
